@@ -1,0 +1,67 @@
+<!--
+-->
+<launch>
+  # Bag filename
+ <arg name="bag_file" /> 
+  
+  # Use simulation time for TFs
+  <param name="use_sim_time" value="true" /> 
+
+  # Bag file
+  <node name="bag_player" type="play" pkg="rosbag" args="$(arg bag_file) --clock -s 0 -r 1.0 -l" /> 
+
+  # Frames
+  <include file="$(find nix_launchers)/launch/frames.launch" />
+
+  <arg name="base_frame_id" default="base_link"/>
+  <arg name="odom_frame_id" default="odom"/>
+  <arg name="global_frame_id" default="map"/>
+
+  # marsella_mapping_2019.bag 
+  <arg name="initial_x" default="6.7"/>
+  <arg name="initial_y" default="14"/>
+  <arg name="initial_z" default="0"/>
+  <arg name="initial_a" default="0.18"/> 
+  <arg name="map" default="marsella_5cm_full.bt" />
+  
+  # 2020-06-25-15-10-43_0.bag 
+  <!--arg name="initial_x" default="6.23"/>
+  <arg name="initial_y" default="11.9"/>
+  <arg name="initial_z" default="0"/>
+  <arg name="initial_a" default="-1.54"/>
+  <arg name="map" default="basement_2.bt"/-->
+
+  # Odom to TF
+  <!--node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf">
+    <param name="laser_frame" value="base_link"/>
+    <param name="rotate_90" value="false"/>
+  </node-->
+
+  # Launch DLL
+  <node name="dll_node" type="dll_node" pkg="dll" output="screen">
+    <remap from="/dll_node/initial_pose" to="/initialpose"/>
+    <param name="in_cloud" value="/os1_cloud_node/points_non_dense" />
+    <param name="base_frame_id" value="$(arg base_frame_id)" />
+    <param name="odom_frame_id" value="$(arg odom_frame_id)" />
+    <param name="global_frame_id" value="$(arg global_frame_id)" />
+
+    <param name="rate" value="10.0" />
+    <param name="map_path" value="$(find dll)/launch/$(arg map)" />
+    <param name="sensor_dev" value="0.02" />   
+    <param name="publish_point_cloud" value="true" />    
+    <param name="update_min_d" value="0.1" />
+    <param name="update_min_a" value="0.1" />
+    <param name="initial_x"   value="$(arg initial_x)"/>
+    <param name="initial_y"   value="$(arg initial_y)"/>
+    <param name="initial_z"   value="$(arg initial_z)"/>
+    <param name="initial_a"   value="$(arg initial_a)"/>
+    <param name="lidar_width" value="1024" />
+    <param name="lidar_height" value="16" />
+    <param name="lidar_fov" value="0.7854" />
+    <param name="m_lidar_fov_down" value="0.3927" />
+    <param name="use_imu" value="false" />
+    
+  </node>
+
+  <node name="rviz" type="rviz" pkg="rviz" output="screen"/>
+</launch>	
