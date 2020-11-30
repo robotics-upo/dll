@@ -8,7 +8,9 @@
   <param name="use_sim_time" value="true" /> 
 
   # Bag file
-  <node name="bag_player" type="play" pkg="rosbag" args="$(arg bag_file) --clock -s 0 -r 1.0 -l" /> 
+  <node name="bag_player" type="play" pkg="rosbag" args="$(arg bag_file) --clock -s 0 -r 1.0 -l" > 
+    <remap from="/tf" to="/tf_fake"/>
+  </node>
 
   # Frames
   <include file="$(find nix_launchers)/launch/frames.launch" />
@@ -23,6 +25,7 @@
   <arg name="initial_z" default="0"/>
   <arg name="initial_a" default="0.18"/> 
   <arg name="map" default="marsella_5cm_full.bt" />
+  <arg name="map_path" default="$(find dll)/maps/$(arg map)"/>
   
   # 2020-06-25-15-10-43_0.bag 
   <!--arg name="initial_x" default="6.23"/>
@@ -32,10 +35,10 @@
   <arg name="map" default="basement_2.bt"/-->
 
   # Odom to TF
-  <!--node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf">
+  <node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf">
     <param name="laser_frame" value="base_link"/>
     <param name="rotate_90" value="false"/>
-  </node-->
+  </node>
 
   # Launch DLL
   <node name="dll_node" type="dll_node" pkg="dll" output="screen">
@@ -46,7 +49,7 @@
     <param name="global_frame_id" value="$(arg global_frame_id)" />
 
     <param name="rate" value="10.0" />
-    <param name="map_path" value="$(find dll)/launch/$(arg map)" />
+    <param name="map_path" value="$(arg map_path)" />
     <param name="sensor_dev" value="0.02" />   
     <param name="publish_point_cloud" value="true" />    
     <param name="update_min_d" value="0.1" />
