@@ -105,19 +105,19 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(dll_node src/dll_node.cpp)
-add_executable(grid3d_node src/grid3d_node.cpp)
+add_executable(grid3d_node_dll src/grid3d_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 add_dependencies(dll_node ${catkin_EXPORTED_TARGETS})
-add_dependencies(grid3d_node ${catkin_EXPORTED_TARGETS})
+add_dependencies(grid3d_node_dll ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(dll_node
    ${catkin_LIBRARIES}
    ${CERES_LIBRARIES}
 )
-target_link_libraries(grid3d_node
+target_link_libraries(grid3d_node_dll
    ${catkin_LIBRARIES}
 )
 
