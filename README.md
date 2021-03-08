@@ -25,3 +25,17 @@ $ catkin_make
 ```
 
 ## How to use DLL
+
+You can find an example of use into the launch directory. The module needs the following input information:
+- A map of the environment. This map is provided as a .bt file
+- You need to provide an initial positio of the robot into the map. 
+- base_link to odom TF. If the sensor is not in base_link frame, the corresponding TF from sensor to base_link must be provided.
+- 3D point cloud from the sensor. This information can be provided by a 3D LIDAR or 3D camera.
+- IMU information is used to get roll and pitch angles. If you don't have IMU, DLL will take the roll and pitch estimations from odometry as the truth values.
+
+Once launched, DLL will publish a TF between map and odom that alligns the sensor point cloud to the map. 
+
+When a new map is provided, DLL will compute the Distance Field grid. This file will be automatically generated on startup if it does not exists. Once generated is recorded in the same path of the .bt map, so that it is not needed to be computed in future executions.
+
+
+
