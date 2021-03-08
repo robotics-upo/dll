@@ -96,7 +96,7 @@ class DLLSolver
     DLLSolver(Grid3d &grid) : _grid(grid)
     {
         google::InitGoogleLogging("DLLSolver");
-        _max_num_iterations = 50;
+        _max_num_iterations = 100;
     }
 
     ~DLLSolver(void)
@@ -127,16 +127,16 @@ class DLLSolver
         // Set up a cost funtion per point into the cloud
         for(unsigned int i=0; i<p.size(); i++)
         {
-          double w, d;
-          d = sqrt(p[i].x*p[i].x + p[i].y*p[i].y + p[i].z*p[i].z);
-          CostFunction* cost_function = new DLLCostFunction(p[i].x, p[i].y, p[i].z, _grid);
-          problem.AddResidualBlock(cost_function, new HuberLoss(1.0), x);
+            CostFunction* cost_function = new DLLCostFunction(p[i].x, p[i].y, p[i].z, _grid);
+            problem.AddResidualBlock(cost_function, new ceres::CauchyLoss(0.1), x); 
         }
 
         // Run the solver!
         Solver::Options options;
         options.minimizer_progress_to_stdout = false;
+        options.linear_solver_type = ceres::DENSE_QR;
         options.max_num_iterations = _max_num_iterations;
+        options.num_threads = 1; 
         Solver::Summary summary;
         Solve(options, &problem, &summary);
 

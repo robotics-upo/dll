@@ -1,0 +1,52 @@
+<!--
+-->
+<launch>
+  
+  # Use simulation time for TFs
+  <param name="use_sim_time" value="true" /> 
+
+  # Bag file
+  <node name="bag_player" type="play" pkg="rosbag" args="catec2.bag -s 0 -r 1.0 --clock " />
+
+ # Fake odometry. You better use a good odometry estrimator as LOAM
+  <node pkg="tf" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom base_link 10" />
+
+  # Flight 1 map conf
+  <arg name="base_frame_id" default="base_link"/>
+  <arg name="odom_frame_id" default="odom"/>
+  <arg name="global_frame_id" default="map"/>
+  <arg name="initial_x" default="15.7"/>
+  <arg name="initial_y" default="13.8"/>
+  <arg name="initial_z" default="1.0"/>
+  <arg name="initial_a" default="0"/> 
+  <arg name="map" default="catec.bt" />
+  <arg name="map_path" default="$(find dll)/maps/$(arg map)"/>
+
+  # Launch DLL
+  <node name="dll_node" type="dll_node" pkg="dll" output="screen">
+    <remap from="/dll_node/initial_pose" to="/initialpose"/>
+    <param name="in_cloud" value="/lidar_pointcloud" />
+    <param name="base_frame_id" value="$(arg base_frame_id)" />
+    <param name="odom_frame_id" value="$(arg odom_frame_id)" />
+    <param name="global_frame_id" value="$(arg global_frame_id)" />
+
+    <param name="rate" value="10.0" />
+    <param name="map_path" value="$(arg map_path)" />
+    <param name="sensor_dev" value="0.05" />   
+    <param name="publish_point_cloud" value="true" />    
+    <param name="update_min_d" value="0.01" />
+    <param name="update_min_a" value="0.01" /> 
+    <param name="update_min_time" value="0.1" />
+    <param name="initial_x"   value="$(arg initial_x)"/>
+    <param name="initial_y"   value="$(arg initial_y)"/>
+    <param name="initial_z"   value="$(arg initial_z)"/>
+    <param name="initial_a"   value="$(arg initial_a)"/>
+    <param name="use_imu" value="false" />  # Watch this!!! No IMU into the bag file, must be computed from ground truth
+    <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
+   
+    
+  </node>
+
+  <node name="rviz" type="rviz" pkg="rviz" args="-d $(find dll)/launch/catec.rviz" output="screen"/>
+
+</launch>	

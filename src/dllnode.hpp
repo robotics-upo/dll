@@ -18,7 +18,6 @@
 #include <vector>
 #include "grid3d.hpp"
 #include "dllsolver.hpp"
-#include "lidarfrontview.hpp"
 #include <time.h>
 
 using std::isnan;
@@ -61,19 +60,13 @@ public:
 			m_dTh = 0.1;
 		if(!lnh.getParam("update_min_a", m_aTh))
 			m_aTh = 0.1;
+		if (!lnh.getParam("update_min_time", m_tTh))
+			m_tTh = 1.0;
 	    if(!lnh.getParam("initial_z_offset", m_initZOffset))
             m_initZOffset = 0.0;  
-
-		// Read Lidar parameters
-		if(!lnh.getParam("lidar_width", m_lidar_width))
-			m_lidar_width = 1024;
-		if(!lnh.getParam("lidar_height", m_lidar_height))
-			m_lidar_height = 16;
-		if(!lnh.getParam("lidar_fov", m_lidar_fov))
-			m_lidar_fov = 0.78539816339;
-		if(!lnh.getParam("lidar_fov_down", m_lidar_fov_down))
-			m_lidar_fov_down = 0.78539816339/2.0;
-
+		if(!lnh.getParam("align_method", m_alignMethod))
+            m_alignMethod = 1;
+		
 		// Init internal variables
 		m_init = false;
 		m_doUpdate = false;
@@ -82,14 +75,14 @@ public:
 		// Compute trilinear interpolation map 
 		m_grid3d.computeTrilinearInterpolation();
 
-		// Initialize front view params
-		m_frontView.init(m_lidar_width, m_lidar_height, m_lidar_fov, m_lidar_fov_down);
-
 		// Launch subscribers
 		m_pcSub = m_nh.subscribe(m_inCloudTopic, 1, &DLLNode::pointcloudCallback, this);
 		m_initialPoseSub = lnh.subscribe("initial_pose", 2, &DLLNode::initialPoseReceived, this);
 		if(m_use_imu)
 			m_imuSub = m_nh.subscribe("imu", 1, &DLLNode::imuCallback, this);
+
+		// Time stamp for periodic update
+		m_lastPeriodicUpdate = ros::Time::now();
 
 		// Launch updater timer
 		updateTimer = m_nh.createTimer(ros::Duration(1.0/m_updateRate), &DLLNode::checkUpdateThresholdsTimer, this);
@@ -128,6 +121,7 @@ public:
 		m_tfBr.sendTransform(tf::StampedTransform(m_lastGlobalTf, ros::Time::now(), m_globalFrameId, m_odomFrameId));
 		
 		// Compute odometric translation and rotation since last update 
+		ros::Time t = ros::Time::now();
 		tf::StampedTransform odomTf;
 		try
 		{
@@ -146,6 +140,7 @@ public:
 		{
             //ROS_INFO("Translation update");
             m_doUpdate = true;
+			m_lastPeriodicUpdate = t;
 			return true;
 		}
 		
@@ -154,12 +149,21 @@ public:
 		T.getBasis().getRPY(roll, pitch, yaw);
 		if(fabs(yaw) > m_aTh)
 		{
-            ROS_INFO("Rotation update");
+            //ROS_INFO("Rotation update");
 			m_doUpdate = true;
+			m_lastPeriodicUpdate = t;
+			return true;
+		}
+
+		// Check time threshold
+		if((t-m_lastPeriodicUpdate).toSec() > m_tTh)
+		{
+			//ROS_INFO("Periodic update");
+			m_doUpdate = true;
+			m_lastPeriodicUpdate = t;
 			return true;
 		}
 		
-	
 		return false;
 	}
 		                                   
@@ -254,10 +258,8 @@ private:
 		pcl_ros::transformPointCloud(m_baseFrameId, m_pclTf, *cloud, baseCloud);
 		
 		// Uniform lidar downsampling based on front view projection
-		std::vector<pcl::PointXYZ> xyzCloud, downCloud;
-		PointCloud2_to_PointXYZ(baseCloud, xyzCloud);
-		m_frontView.setPointCloud(xyzCloud);
-		m_frontView.getCloud(downCloud);
+		std::vector<pcl::PointXYZ> downCloud;
+		PointCloud2_to_PointXYZ(baseCloud, downCloud);
 			
 		// Get estimated position into the map
 		double tx, ty, tz;
@@ -293,9 +295,12 @@ private:
 		}
 
 		// Launch DLL solver
-		ros::Time t = ros::Time::now();
-		m_solver.solve(points, tx, ty, tz, m_yaw);
-		printf("Optimization time: %2.4f s\n", (ros::Time::now()-t).toSec());
+		if(m_alignMethod == 1) // DLL solver
+			m_solver.solve(points, tx, ty, tz, m_yaw);
+		else if(m_alignMethod == 2) // NDT solver
+			m_grid3d.alignNDT(points, tx, ty, tz, m_yaw);
+		else if(m_alignMethod == 3) // ICP solver
+			m_grid3d.alignICP(points, tx, ty, tz, m_yaw);
 
 		// Update global TF
 		tf::Quaternion q;
@@ -366,6 +371,8 @@ private:
 			if(d2 > 1 && d2 < 10000)
 				out.push_back(p);			
 		}
+
+		return true;
 	}
 
 	//! Indicates if the filter was initialized
@@ -385,15 +392,13 @@ private:
     double m_initX, m_initY, m_initZ, m_initA, m_initZOffset;
 		
 	//! Thresholds and params for filter updating
-	double m_dTh, m_aTh;
+	double m_dTh, m_aTh, m_tTh;
 	tf::StampedTransform m_lastOdomTf;
 	tf::Transform m_lastGlobalTf;
 	bool m_doUpdate;
 	double m_updateRate;
-
-	//! Lidar parameters
-	int m_lidar_width, m_lidar_height;
-	double m_lidar_fov, m_lidar_fov_down;
+	int m_alignMethod;
+	ros::Time m_lastPeriodicUpdate;
 		
 	//! Node parameters
 	std::string m_inCloudTopic;
@@ -413,9 +418,6 @@ private:
 		
 	//! Non-linear optimization solver
 	DLLSolver m_solver;
-
-	//! LIDAR front view
-	LidarFrontView m_frontView;
 };
 
 #endif

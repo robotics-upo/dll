@@ -20,10 +20,13 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/registration/icp.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/ndt.h>
+#include <pcl/filters/approximate_voxel_grid.h>
 
 struct TrilinearParams
 {
-	double a0, a1, a2, a3, a4, a5, a6, a7;
+	float a0, a1, a2, a3, a4, a5, a6, a7;
 
 	TrilinearParams(void)
 	{
@@ -85,8 +88,11 @@ private:
 	// Trilinear approximation parameters (for each grid cell)
 	TrilinearParams *m_triGrid;
 
-	// ICP staff
+	// ICP 
 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> m_icp;
+
+	// NDT 
+	pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> m_ndt;
 	
 public:
 	Grid3d(std::string &node_name) : m_cloud(new pcl::PointCloud<pcl::PointXYZ>), m_triGrid(NULL)
@@ -154,6 +160,17 @@ public:
 				mapTimer = m_nh.createTimer(ros::Duration(1.0/m_publishPointCloudRate), &Grid3d::publishMapPointCloudTimer, this);
 			}
 		}
+
+		// Setup ICP
+		m_icp.setMaximumIterations (50);
+  		m_icp.setMaxCorrespondenceDistance (0.1);
+  		m_icp.setRANSACOutlierRejectionThreshold (1.0);
+
+		// Setup NDT
+		m_ndt.setTransformationEpsilon (0.01);  // Setting minimum transformation difference for termination condition.
+  		m_ndt.setStepSize (0.1);   // Setting maximum step size for More-Thuente line search.
+  		m_ndt.setResolution (1.0);   //Setting Resolution of NDT grid structure (VoxelGridCovariance).
+		m_ndt.setMaximumIterations (50);   // Setting max number of registration iterations.
 	}
 
 	Grid3d(std::string &node_name, std::string &map_path) : m_cloud(new pcl::PointCloud<pcl::PointXYZ>), m_triGrid(NULL)
@@ -195,6 +212,17 @@ public:
 					std::cout << "Grid map successfully saved on " << path << std::endl;
 			}			
 		}
+
+		// Setup ICP
+		m_icp.setMaximumIterations (50);
+  		m_icp.setMaxCorrespondenceDistance (0.1);
+  		m_icp.setRANSACOutlierRejectionThreshold (1.0);
+
+		// Setup NDT
+		m_ndt.setTransformationEpsilon (0.01);  // Setting minimum transformation difference for termination condition.
+  		m_ndt.setStepSize (0.1);   // Setting maximum step size for More-Thuente line search.
+  		m_ndt.setResolution (1.0);   //Setting Resolution of NDT grid structure (VoxelGridCovariance).
+		m_ndt.setMaximumIterations (50);   // Setting max number of registration iterations.
 	}
 
 	~Grid3d(void)
@@ -325,11 +353,12 @@ public:
 		return true;
 	}
 
-	bool computeTransform(std::vector<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
+	bool alignICP(std::vector<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
 	{
 		pcl::PointCloud<pcl::PointXYZ>::Ptr c (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ> Final;
 
+		// Copy cloud into PCL struct
 		c->width = p.size();
 		c->height = 1;
 		c->points.resize(c->width * c->height);
@@ -339,13 +368,66 @@ public:
 			c->points[i].y = p[i].y;
 			c->points[i].z = p[i].z;
 		}
-		m_icp.setInputCloud(c);
-		m_icp.setMaximumIterations (50);
-  		m_icp.setMaxCorrespondenceDistance (0.1);
-  		m_icp.setRANSACOutlierRejectionThreshold (1.0);
-		m_icp.align(Final);
-  		std::cout << "has converged:" << m_icp.hasConverged() << " score: " << m_icp.getFitnessScore() << std::endl;
-  		std::cout << m_icp.getFinalTransformation() << std::endl;
+
+		// Setup initial solution (poinc-cloud is tilt compensated)
+  		Eigen::AngleAxisf initRotation (a, Eigen::Vector3f::UnitZ ());
+  		Eigen::Translation3f initTranslation (tx, ty, tz);
+  		Eigen::Matrix4f initGuess = (initTranslation * initRotation).matrix ();
+
+		// Setup icp and perform alignement
+		m_icp.setInputSource(c);
+		m_icp.align(Final, initGuess);
+
+		// Get solution
+		Eigen::Matrix4f T = m_icp.getFinalTransformation();
+		tx = T(0,3);
+		ty = T(1,3);
+		tz = T(2,3);
+		a = atan2(T(1,0),T(0,0));
+
+		return true;
+	}
+
+	bool alignNDT(std::vector<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
+	{
+		pcl::PointCloud<pcl::PointXYZ>::Ptr c (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::PointCloud<pcl::PointXYZ> Final;
+
+		// Copy cloud into PCL struct
+		c->width = p.size();
+		c->height = 1;
+		c->points.resize(c->width * c->height);
+		for(unsigned int i=0; i<p.size(); i++)
+		{
+			c->points[i].x = p[i].x;
+			c->points[i].y = p[i].y;
+			c->points[i].z = p[i].z;
+		}
+
+		// Setup initial solution (poinc-cloud is tilt compensated)
+  		Eigen::AngleAxisf initRotation (a, Eigen::Vector3f::UnitZ ());
+  		Eigen::Translation3f initTranslation (tx, ty, tz);
+  		Eigen::Matrix4f initGuess = (initTranslation * initRotation).matrix ();
+
+		// Downsample input cloud
+		pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::ApproximateVoxelGrid<pcl::PointXYZ> approximate_voxel_filter;
+		approximate_voxel_filter.setLeafSize (2.0, 2.0, 2.0);
+		approximate_voxel_filter.setInputCloud (c);
+		approximate_voxel_filter.filter (*filtered_cloud);
+
+		// Setup icp and perform alignement
+		m_ndt.setInputSource(filtered_cloud);
+		m_ndt.align(Final, initGuess);
+
+		// Get solution
+		Eigen::Matrix4f T = m_ndt.getFinalTransformation();
+		tx = T(0,3);
+		ty = T(1,3);
+		tz = T(2,3);
+		a = atan2(T(1,0),T(0,0));
+
+		return true;
 	}
 
 protected:
