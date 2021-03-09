@@ -40,7 +40,7 @@ When a new map is provided, DLL will compute the Distance Field grid. This file 
 
 As example, you can download 5 datasets from the Service Robotics Laboratory repository (https://robotics.upo.es/datasets/dll/). The example launch files are prepared and configured to work with these bags. You can see the different parameters of the method. Notice that, except for mbzirc.bag, the bags do not include osometry estimation. For this reason, as an easy work around, the lauch files publish a fake odometry that is the identity matrix. DLL is faster and more accurate when a good odometry is available.
 
-## Citing
+## Cite
 DLL has been submitted to IROS 2021, it is currently under review.
 
 F. Caballero & L. Merino. "DLL: Direct LIDAR Localization. A map-based localization approach for aerial robots". Sumbitted to the International Conference on Intelligent Robots and Systems, IROS 2021.
