@@ -5,6 +5,8 @@ This package presents DLL, a direct map-based localization technique using 3D LI
 
 DLL is fully integarted in Robot Operating System (ROS). It follows the general localization apparoch of ROS, DLL makes use of sensor data to compute the translation that better fits the robot odometry TF into the map. Although an odometry system is recommended for fast and accurate localization, DLL also performs well without odometry information if the robot moves smoothly. 
 
+![DLL experimental results in different setups](dll_video.gif)
+
 ## Software dependencies
 There are not hard dependencies except for Google Ceres Solver and 
  - ceres: Follow installation instructions for Google Ceres (http://ceres-solver.org/installation.html)
