@@ -45,9 +45,9 @@ As example, you can download 5 datasets from the Service Robotics Laboratory rep
 ## Cite
 DLL has been submitted to IROS 2021, it is currently under review.
 
-F. Caballero & L. Merino. "DLL: Direct LIDAR Localization. A map-based localization approach for aerial robots". Sumbitted to the International Conference on Intelligent Robots and Systems, IROS 2021.
+F. Caballero and L. Merino. "DLL: Direct LIDAR Localization. A map-based localization approach for aerial robots". Sumbitted to the International Conference on Intelligent Robots and Systems, IROS 2021.
 
-You can download the paper from ArXiv in the following link: 
+You can download the paper from [arXiv](https://arxiv.org/abs/2103.06112) 
 
 
 
