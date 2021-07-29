@@ -53,6 +53,7 @@ private:
 	
 	// Octomap parameters
 	float m_maxX, m_maxY, m_maxZ;
+	double min_X, min_Y, min_Z, max_X, max_Y, max_Z;
 	float m_resolution, m_oneDivRes;
 	octomap::OcTree *m_octomap;
 	
@@ -107,7 +108,7 @@ public:
 		if(!lnh.getParam("map_path", m_mapPath))
 			m_mapPath = "map.ot";
 		if(!lnh.getParam("publish_point_cloud", m_publishPc))
-			m_publishPc = false;
+			m_publishPc = true;
 		if(!lnh.getParam("publish_point_cloud_rate", m_publishPointCloudRate))
 			m_publishPointCloudRate = 0.2;	
 		if(!lnh.getParam("publish_grid_slice", value))
@@ -200,6 +201,7 @@ public:
 				path = m_mapPath.substr(0,m_mapPath.find(".bt"))+".grid";
 			if(m_mapPath.compare(m_mapPath.length()-3, 3, ".ot") == 0)
 				path = m_mapPath.substr(0,m_mapPath.find(".ot"))+".grid";
+
 			if(!loadGrid(path))
 			{						
 				// Compute the gridMap using kdtree search over the point-cloud
@@ -271,7 +273,7 @@ public:
 	
 	bool isIntoMap(double x, double y, double z)
 	{
-		return (x >= 0.0 && y >= 0.0 && z >= 0.0 && x < m_maxX && y < m_maxY && z < m_maxZ);
+		return (x >= min_X && y >= min_Y && z >= min_Z && x < max_X && y < max_Y && z < max_Z);
 	}
 
 	double getPointDist(double x, double y, double z)
@@ -488,12 +490,15 @@ protected:
 		double minX, minY, minZ, maxX, maxY, maxZ, res;
 		m_octomap->getMetricMin(minX, minY, minZ);
 		m_octomap->getMetricMax(maxX, maxY, maxZ);
+		min_X = minX; min_Y = minY; min_Z = minZ; 
+		max_X = maxX; max_Y = maxY; max_Z = maxZ;
 		res = m_octomap->getResolution();
 		m_maxX = (float)(maxX-minX);
 		m_maxY = (float)(maxY-minY);
 		m_maxZ = (float)(maxZ-minZ);
 		m_resolution = (float)res;
 		m_oneDivRes = 1.0/m_resolution;
+		std::cout << "\tm_oneDivRes: " << m_oneDivRes << std::endl;
 		std::cout << "Map size:\n\tx: " << minX << " to " << maxX << std::endl;
 		std::cout << "\ty: " << minY << " to " << maxY << std::endl;
 		std::cout << "\tz: " << minZ << " to " << maxZ << std::endl;
@@ -566,8 +571,8 @@ protected:
 	void computePointCloud(void)
 	{
 		// Get map parameters
-		double minX, minY, minZ;
-		m_octomap->getMetricMin(minX, minY, minZ);
+		// double minX, minY, minZ;
+		// m_octomap->getMetricMin(minX, minY, minZ);
 		
 		// Load the octomap in PCL for easy nearest neighborhood computation
 		// The point-cloud is shifted to have (0,0,0) as min values
@@ -579,9 +584,9 @@ protected:
 		{
 			if(it != NULL && m_octomap->isNodeOccupied(*it))
 			{
-				m_cloud->points[i].x = it.getX()-minX;
-				m_cloud->points[i].y = it.getY()-minY;
-				m_cloud->points[i].z = it.getZ()-minZ;
+				m_cloud->points[i].x = it.getX();
+				m_cloud->points[i].y = it.getY();
+				m_cloud->points[i].z = it.getZ();
 				i++;
 			}
 		}
@@ -630,25 +635,29 @@ protected:
 			{
 				for(int ix=0; ix<m_gridSizeX; ix++)
 				{
-					searchPoint.x = ix*m_resolution;
-					searchPoint.y = iy*m_resolution;
-					searchPoint.z = iz*m_resolution;
+					searchPoint.x = (min_X*m_oneDivRes+ix)*m_resolution;
+					searchPoint.y = (min_Y*m_oneDivRes+iy)*m_resolution;
+					searchPoint.z = (min_Z*m_oneDivRes+iz)*m_resolution;
 					index = ix + iy*m_gridStepY + iz*m_gridStepZ;
 					++count;
 					percent = count/size *100.0;
 					ROS_INFO_THROTTLE(0.5,"Progress: %lf %%", percent);	
+
+					// printf("index=[%i] m_resolution=[%f] searchPoint=[%f %f %f] ",index, m_resolution, searchPoint.x, searchPoint.y, searchPoint.z);
 					
 					if(m_kdtree.nearestKSearch(searchPoint, 1, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
 					{
 						dist = pointNKNSquaredDistance[0];
-						m_grid[index].dist = dist;
+						m_grid[index].dist = sqrt(dist);
 						m_grid[index].prob = gaussConst1*exp(-dist*dist*gaussConst2);
+						// m_grid[index].prob = 0.0;
 					}
 					else
 					{
 						m_grid[index].dist = -1.0;
 						m_grid[index].prob =  0.0;
 					}
+					// printf(" , m_grid.dist= %f , m_grid.prob=%f\n", m_grid[index].dist, m_grid[index].prob);
 
 				}
 			}
@@ -694,7 +703,15 @@ protected:
 	
 	inline int point2grid(const float &x, const float &y, const float &z)
 	{
-		return (int)(x*m_oneDivRes) + (int)(y*m_oneDivRes)*m_gridStepY + (int)(z*m_oneDivRes)*m_gridStepZ;
+		int value_ = round((x-min_X)*m_oneDivRes) + round((y-min_Y)*m_oneDivRes*m_gridStepY) + round((z-min_Z)*m_oneDivRes*m_gridStepZ);
+		// printf("x= %f , min_X= %f\n",x,	min_X);
+		// printf("y= %f , min_Z= %f\n",y,	min_Y);
+		// printf("z= %f , min_Z= %f\n",z,	min_Z);
+		// printf("for X: %f\n",((x-min_X)*m_oneDivRes));
+		// printf("for Y: %f\n",((y-min_Y)*m_oneDivRes*m_gridStepY));
+		// printf("for Z: %f\n",round((z-min_Z)*m_oneDivRes*m_gridStepZ));
+		// printf("point2grid:  value_= %i , m_oneDivRes=%f , m_gridStepY=%i , m_gridStepZ=%i \n",value_, m_oneDivRes, m_gridStepY, m_gridStepZ);
+		return value_;
 	}
 };
 
