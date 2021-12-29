@@ -538,7 +538,7 @@ protected:
 		pf = fopen(fileName.c_str(), "rb");
 		if(pf == NULL)
 		{
-			std::cout << "Error opening file " << fileName << " for reading" << std::endl;
+			std::cout << fileName << " not found!" << std::endl;
 			return false;
 		}
 		
@@ -636,7 +636,7 @@ protected:
 					index = ix + iy*m_gridStepY + iz*m_gridStepZ;
 					++count;
 					percent = count/size *100.0;
-					ROS_INFO_THROTTLE(0.5,"Progress: %lf %%", percent);	
+					printf("Computing grid map: %3.6lf%%        \r", percent);
 					
 					if(m_kdtree.nearestKSearch(searchPoint, 1, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
 					{
