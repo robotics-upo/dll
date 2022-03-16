@@ -77,7 +77,7 @@ public:
 		m_tfCache = false;
 		
 		// Compute trilinear interpolation map 
-		m_grid3d.computeTrilinearInterpolation();
+		//m_grid3d.computeTrilinearInterpolation(); /* Now we compute the approximation online */
 
 		// Setup solver parameters
 		m_solver.setMaxNumIterations(m_solverMaxIter);

@@ -48,7 +48,7 @@ class DLLCostFunction
         nx = ca*_px - sa*_py + tx;
         ny = sa*_px + ca*_py + ty;
         nz = _pz + tz;
-        p = _grid.getPointDistInterpolation(nx, ny, nz);
+        p = _grid.computeDistInterpolation(nx, ny, nz);
         c0 = p.a0; c1 = p.a1; c2 = p.a2; c3 = p.a3; c4 = p.a4; c5 = p.a5; c6 = p.a6; c7 = p.a7;
 
         residuals[0] =  _weight*(c0 + c1*nx + c2*ny + c3*nz + c4*nx*ny + c5*nx*nz + c6*ny*nz + c7*nx*ny*nz);
