@@ -66,6 +66,10 @@ public:
             m_initZOffset = 0.0;  
 		if(!lnh.getParam("align_method", m_alignMethod))
             m_alignMethod = 1;
+		if(!lnh.getParam("solver_max_iter", m_solverMaxIter))
+			m_solverMaxIter = 75;
+		if(!lnh.getParam("solver_max_threads", m_solverMaxThreads))
+			m_solverMaxThreads = 8;
 		
 		// Init internal variables
 		m_init = false;
@@ -74,6 +78,10 @@ public:
 		
 		// Compute trilinear interpolation map 
 		m_grid3d.computeTrilinearInterpolation();
+
+		// Setup solver parameters
+		m_solver.setMaxNumIterations(m_solverMaxIter);
+		m_solver.setMaxNumThreads(m_solverMaxThreads);
 
 		// Launch subscribers
 		m_pcSub = m_nh.subscribe(m_inCloudTopic, 1, &DLLNode::pointcloudCallback, this);
@@ -397,7 +405,7 @@ private:
 	tf::Transform m_lastGlobalTf;
 	bool m_doUpdate;
 	double m_updateRate;
-	int m_alignMethod;
+	int m_alignMethod, m_solverMaxIter, m_solverMaxThreads;
 	ros::Time m_lastPeriodicUpdate;
 		
 	//! Node parameters

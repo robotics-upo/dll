@@ -90,6 +90,7 @@ class DLLSolver
 
     // Optimizer parameters
     int _max_num_iterations;
+    int _max_num_threads;
 
   public:
 
@@ -97,6 +98,7 @@ class DLLSolver
     {
         google::InitGoogleLogging("DLLSolver");
         _max_num_iterations = 100;
+        _max_num_threads = 8;
     }
 
     ~DLLSolver(void)
@@ -109,6 +111,17 @@ class DLLSolver
         if(n>0)
         {
             _max_num_iterations = n;
+            return true;
+        } 
+        else
+            return false;
+    }
+
+    bool setMaxNumThreads(int n)
+    {
+        if(n>0)
+        {
+            _max_num_threads = n;
             return true;
         } 
         else
@@ -136,7 +149,7 @@ class DLLSolver
         options.minimizer_progress_to_stdout = false;
         options.linear_solver_type = ceres::DENSE_QR;
         options.max_num_iterations = _max_num_iterations;
-        options.num_threads = 1; 
+        options.num_threads = _max_num_threads; 
         Solver::Summary summary;
         Solve(options, &problem, &summary);
 
