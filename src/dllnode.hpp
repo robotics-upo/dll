@@ -43,7 +43,9 @@ public:
 			m_globalFrameId = "map";	
 		if (!lnh.getParam("use_imu", m_use_imu)) 
 			m_use_imu = false;
-		m_roll = m_pitch = m_yaw = 0.0;
+		if (!lnh.getParam("use_yaw_increments", m_useYawIncrements)) 
+			m_useYawIncrements = false;
+		m_roll_imu = m_pitch_imu = m_yaw_imu = 0.0;
 		
 		// Read DLL parameters
 		if(!lnh.getParam("update_rate", m_updateRate))
@@ -66,6 +68,10 @@ public:
             m_initZOffset = 0.0;  
 		if(!lnh.getParam("align_method", m_alignMethod))
             m_alignMethod = 1;
+		if(!lnh.getParam("solver_max_iter", m_solverMaxIter))
+			m_solverMaxIter = 75;
+		if(!lnh.getParam("solver_max_threads", m_solverMaxThreads))
+			m_solverMaxThreads = 8;
 		
 		// Init internal variables
 		m_init = false;
@@ -73,7 +79,11 @@ public:
 		m_tfCache = false;
 		
 		// Compute trilinear interpolation map 
-		m_grid3d.computeTrilinearInterpolation();
+		//m_grid3d.computeTrilinearInterpolation(); /* Now we compute the approximation online */
+
+		// Setup solver parameters
+		m_solver.setMaxNumIterations(m_solverMaxIter);
+		m_solver.setMaxNumThreads(m_solverMaxThreads);
 
 		// Launch subscribers
 		m_pcSub = m_nh.subscribe(m_inCloudTopic, 1, &DLLNode::pointcloudCallback, this);
@@ -197,25 +207,28 @@ private:
 	//! IMU callback
 	void imuCallback(const sensor_msgs::Imu::ConstPtr& msg) 
 	{
-		double r = m_roll;
-		double p = m_pitch;
-		double y = m_yaw;
+		double r = m_roll_imu;
+		double p = m_pitch_imu;
+		double y = m_yaw_imu;
 		auto o = msg->orientation;
 		tf::Quaternion q;
 		tf::quaternionMsgToTF(o, q);
 		tf::Matrix3x3 M(q);
-		M.getRPY(m_roll, m_pitch, m_yaw);
-		if (isnan(m_roll) || isnan(m_pitch) || isnan(m_yaw)) 
+		M.getRPY(m_roll_imu, m_pitch_imu, m_yaw_imu);
+		if (isnan(m_roll_imu) || isnan(m_pitch_imu) || isnan(m_yaw_imu)) 
 		{
-			m_roll = r;
-			m_pitch = p;
-			m_yaw = y;
+			m_roll_imu = r;
+			m_pitch_imu = p;
+			m_yaw_imu = y;
 		}
 	}
 
 	//! 3D point-cloud callback
 	void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
-	{		
+	{	
+		static double lastYaw_imu = -1000.0;
+		double deltaYaw_imu = 0;
+	
 		// If the filter is not initialized then exit
 		if(!m_init)
 			return;
@@ -257,7 +270,7 @@ private:
 		sensor_msgs::PointCloud2 baseCloud;
 		pcl_ros::transformPointCloud(m_baseFrameId, m_pclTf, *cloud, baseCloud);
 		
-		// Uniform lidar downsampling based on front view projection
+		// PointCloud2 to PointXYZ conevrsion, with range limits [0,1000]
 		std::vector<pcl::PointXYZ> downCloud;
 		PointCloud2_to_PointXYZ(baseCloud, downCloud);
 			
@@ -268,20 +281,35 @@ private:
 		tz = mapTf.getOrigin().getZ();
 
 		// Get estimated orientation into the map
-		double r, p;
+		double roll, pitch, yaw;
 		if(m_use_imu)
-		    mapTf.getBasis().getRPY(r, p, m_yaw);  // Get roll and pitch from IMU 
+		{
+			// Get roll and pitch from IMU, yaw from TF
+			double r, p;
+		    mapTf.getBasis().getRPY(r, p, yaw);   
+			roll = m_roll_imu;
+			pitch = m_pitch_imu;
+
+			// Get yaw increment from IMU, if so required
+			if(m_useYawIncrements)
+			{
+				if(lastYaw_imu < -100.0)
+					lastYaw_imu = m_yaw_imu;
+				deltaYaw_imu = m_yaw_imu-lastYaw_imu;
+				lastYaw_imu = m_yaw_imu;
+			}
+		}
 		else
-			mapTf.getBasis().getRPY(m_roll, m_pitch, m_yaw);
+			mapTf.getBasis().getRPY(roll, pitch, yaw);
 		
 		// Tilt-compensate point-cloud according to roll and pitch
 		std::vector<pcl::PointXYZ> points;
 		float cr, sr, cp, sp, cy, sy, rx, ry;
 		float r00, r01, r02, r10, r11, r12, r20, r21, r22;
-		sr = sin(m_roll);
-		cr = cos(m_roll);
-		sp = sin(m_pitch);
-		cp = cos(m_pitch);
+		sr = sin(roll);
+		cr = cos(roll);
+		sp = sin(pitch);
+		cp = cos(pitch);
 		r00 = cp; 	r01 = sp*sr; 	r02 = cr*sp;
 		r10 =  0; 	r11 = cr;		r12 = -sr;
 		r20 = -sp;	r21 = cp*sr;	r22 = cp*cr;
@@ -295,16 +323,21 @@ private:
 		}
 
 		// Launch DLL solver
+		double a;
+		if(m_use_imu && m_useYawIncrements)
+			a = yaw+deltaYaw_imu;
 		if(m_alignMethod == 1) // DLL solver
-			m_solver.solve(points, tx, ty, tz, m_yaw);
+			m_solver.solve(points, tx, ty, tz, a);
 		else if(m_alignMethod == 2) // NDT solver
-			m_grid3d.alignNDT(points, tx, ty, tz, m_yaw);
+			m_grid3d.alignNDT(points, tx, ty, tz, a);
 		else if(m_alignMethod == 3) // ICP solver
-			m_grid3d.alignICP(points, tx, ty, tz, m_yaw);
+			m_grid3d.alignICP(points, tx, ty, tz, a);
+		if(m_use_imu && m_useYawIncrements)
+			yaw = a;
 
 		// Update global TF
 		tf::Quaternion q;
-		q.setRPY(m_roll, m_pitch, m_yaw);
+		q.setRPY(roll, pitch, yaw);
 		m_lastGlobalTf = tf::Transform(q, tf::Vector3(tx, ty, tz))*odomTf.inverse();
 
 		// Update time and transform information
@@ -328,19 +361,25 @@ private:
 		}
 
 		// Get estimated orientation from IMU if available
-		double r, p;
+		double roll, pitch, yaw;
 		if(m_use_imu)
-		    m_lastOdomTf.getBasis().getRPY(r, p, m_yaw);  // Get roll and pitch from IMU 
+		{
+			// Get roll and pitch from IMU, yaw from TF
+			double r, p;
+		    m_lastOdomTf.getBasis().getRPY(r, p, yaw);   
+			roll = m_roll_imu;
+			pitch = m_pitch_imu;
+		}
 		else
-			m_lastOdomTf.getBasis().getRPY(m_roll, m_pitch, m_yaw);
+			m_lastOdomTf.getBasis().getRPY(roll, pitch, yaw);
 		
 		// Get position information from pose
 		tf::Vector3 t = initPose.getOrigin();
-		m_yaw = getYawFromTf(initPose);
+		yaw = getYawFromTf(initPose);
 		
 		// Update global TF
 		tf::Quaternion q;
-		q.setRPY(m_roll, m_pitch, m_yaw);
+		q.setRPY(roll, pitch, yaw);
 		m_lastGlobalTf = tf::Transform(q, tf::Vector3(t.x(), t.y(), t.z()+m_initZOffset))*m_lastOdomTf.inverse();
 
 		// Prepare next iterations		
@@ -379,14 +418,14 @@ private:
 	bool m_init;
 
 	//! Use IMU flag
-	bool m_use_imu;
+	bool m_use_imu, m_useYawIncrements;
 	
 	//! Indicates that the local transfrom for the pint-cloud is cached
 	bool m_tfCache;
 	tf::StampedTransform m_pclTf;
 	
 	//! Particles roll and pich (given by IMU)
-	double m_roll, m_pitch, m_yaw;
+	double m_roll_imu, m_pitch_imu, m_yaw_imu;
 	
 	//! Filter initialization
     double m_initX, m_initY, m_initZ, m_initA, m_initZOffset;
@@ -397,7 +436,7 @@ private:
 	tf::Transform m_lastGlobalTf;
 	bool m_doUpdate;
 	double m_updateRate;
-	int m_alignMethod;
+	int m_alignMethod, m_solverMaxIter, m_solverMaxThreads;
 	ros::Time m_lastPeriodicUpdate;
 		
 	//! Node parameters

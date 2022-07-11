@@ -48,7 +48,7 @@ class DLLCostFunction
         nx = ca*_px - sa*_py + tx;
         ny = sa*_px + ca*_py + ty;
         nz = _pz + tz;
-        p = _grid.getPointDistInterpolation(nx, ny, nz);
+        p = _grid.computeDistInterpolation(nx, ny, nz);
         c0 = p.a0; c1 = p.a1; c2 = p.a2; c3 = p.a3; c4 = p.a4; c5 = p.a5; c6 = p.a6; c7 = p.a7;
 
         residuals[0] =  _weight*(c0 + c1*nx + c2*ny + c3*nz + c4*nx*ny + c5*nx*nz + c6*ny*nz + c7*nx*ny*nz);
@@ -90,6 +90,7 @@ class DLLSolver
 
     // Optimizer parameters
     int _max_num_iterations;
+    int _max_num_threads;
 
   public:
 
@@ -97,6 +98,7 @@ class DLLSolver
     {
         google::InitGoogleLogging("DLLSolver");
         _max_num_iterations = 100;
+        _max_num_threads = 8;
     }
 
     ~DLLSolver(void)
@@ -109,6 +111,17 @@ class DLLSolver
         if(n>0)
         {
             _max_num_iterations = n;
+            return true;
+        } 
+        else
+            return false;
+    }
+
+    bool setMaxNumThreads(int n)
+    {
+        if(n>0)
+        {
+            _max_num_threads = n;
             return true;
         } 
         else
@@ -136,7 +149,7 @@ class DLLSolver
         options.minimizer_progress_to_stdout = false;
         options.linear_solver_type = ceres::DENSE_QR;
         options.max_num_iterations = _max_num_iterations;
-        options.num_threads = 1; 
+        options.num_threads = _max_num_threads; 
         Solver::Summary summary;
         Solve(options, &problem, &summary);
 

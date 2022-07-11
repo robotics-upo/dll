@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   octomap_ros
   nav_msgs
-)
+) 
 
 # Ceres solver
 find_package(Ceres REQUIRED)
