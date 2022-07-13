@@ -407,7 +407,7 @@ private:
 		{
 			pcl::PointXYZ p(*iterX, *iterY, *iterZ);
 			float d2 = p.x*p.x + p.y*p.y + p.z*p.z;
-			if(d2 > 1 && d2 < 10000)
+			if(d2 > 1 && d2 < 10000 && i%2 == 0)
 				out.push_back(p);			
 		}
 
