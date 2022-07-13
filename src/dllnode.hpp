@@ -46,6 +46,9 @@ public:
 		if (!lnh.getParam("use_yaw_increments", m_useYawIncrements)) 
 			m_useYawIncrements = false;
 		m_roll_imu = m_pitch_imu = m_yaw_imu = 0.0;
+
+		lnh.param("n_downsample", m_n_downsample, 1);
+		ROS_INFO("Taking only one of %d samples", m_n_downsample);
 		
 		// Read DLL parameters
 		if(!lnh.getParam("update_rate", m_updateRate))
@@ -407,7 +410,7 @@ private:
 		{
 			pcl::PointXYZ p(*iterX, *iterY, *iterZ);
 			float d2 = p.x*p.x + p.y*p.y + p.z*p.z;
-			if(d2 > 1 && d2 < 10000)
+			if(d2 > 1 && d2 < 10000 && i%m_n_downsample == 0)
 				out.push_back(p);			
 		}
 
@@ -419,6 +422,8 @@ private:
 
 	//! Use IMU flag
 	bool m_use_imu, m_useYawIncrements;
+
+	int m_n_downsample;
 	
 	//! Indicates that the local transfrom for the pint-cloud is cached
 	bool m_tfCache;
