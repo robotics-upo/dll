@@ -326,7 +326,7 @@ private:
 		}
 
 		// Launch DLL solver
-		double a;
+		double a = yaw;
 		if(m_use_imu && m_useYawIncrements)
 			a = yaw+deltaYaw_imu;
 		if(m_alignMethod == 1) // DLL solver
@@ -335,9 +335,8 @@ private:
 			m_grid3d.alignNDT(points, tx, ty, tz, a);
 		else if(m_alignMethod == 3) // ICP solver
 			m_grid3d.alignICP(points, tx, ty, tz, a);
-		if(m_use_imu && m_useYawIncrements)
-			yaw = a;
-
+		yaw = a;
+		
 		// Update global TF
 		tf::Quaternion q;
 		q.setRPY(roll, pitch, yaw);

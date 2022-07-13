@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(dll)
 
+## Compile as C++11, supported in ROS Kinetic and newer
+add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-simd)
+
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -14,10 +18,18 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   octomap_ros
   nav_msgs
-) 
+)
 
 # Ceres solver
 find_package(Ceres REQUIRED)
+
+# OpenMP library
+find_package(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+  message(STATUS "OPENMP FOUND")
+  set(OpenMP_FLAGS ${OpenMP_CXX_FLAGS})  # or if you use C: ${OpenMP_C_FLAGS}
+  set(OpenMP_LIBS gomp)
+endif()
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -105,20 +117,25 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(dll_node src/dll_node.cpp)
+target_compile_options(dll_node PRIVATE ${OpenMP_FLAGS})
 add_executable(grid3d_node_dll src/grid3d_node.cpp)
+target_compile_options(grid3d_node_dll PRIVATE ${OpenMP_FLAGS})
+
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(dll_node ${catkin_EXPORTED_TARGETS})
-add_dependencies(grid3d_node_dll ${catkin_EXPORTED_TARGETS})
+add_dependencies(dll_node ${dllEXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(grid3d_node_dll ${dll_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} )
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(dll_node
    ${catkin_LIBRARIES}
    ${CERES_LIBRARIES}
+   ${OpenMP_LIBS}
 )
 target_link_libraries(grid3d_node_dll
    ${catkin_LIBRARIES}
+   ${OpenMP_LIBS}
 )
 
 #############
