@@ -8,7 +8,7 @@ add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
