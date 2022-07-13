@@ -12,7 +12,6 @@
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 #include <nav_msgs/OccupancyGrid.h>
-#include <std_msgs/Float32.h>
 #include <stdio.h> 
 
 // PCL
@@ -48,26 +47,17 @@ private:
 	bool m_saveGrid, m_publishPc;
 	std::string m_mapPath, m_nodeName;
 	std::string m_globalFrameId;
-	float m_sensorDev, m_gridSlice;
+	float m_gridSlice;
 	double m_publishPointCloudRate, m_publishGridSliceRate;
 	
 	// Octomap parameters
 	float m_maxX, m_maxY, m_maxZ;
 	float m_resolution, m_oneDivRes;
 	octomap::OcTree *m_octomap;
+	float m_offsetX, m_offsetY, m_offsetZ;
 	
 	// 3D probabilistic grid cell
-	struct gridCell
-	{
-		float dist;
-		float prob;
-		gridCell(void)
-		{
-			dist = -1.0;
-			prob =  0.0;
-		}
-	};
-	gridCell *m_grid;
+	uint16_t *m_grid;
 	int m_gridSize, m_gridSizeX, m_gridSizeY, m_gridSizeZ;
 	int m_gridStepY, m_gridStepZ;
 	
@@ -115,9 +105,6 @@ public:
 		if(!lnh.getParam("publish_grid_slice_rate", m_publishGridSliceRate))
 			m_publishGridSliceRate = 0.2;
 		m_gridSlice = (float)value;
-		if(!lnh.getParam("sensor_dev", value))
-			value = 0.2;
-		m_sensorDev = (float)value;
 		
 		// Load octomap 
 		m_octomap = NULL;
@@ -180,10 +167,6 @@ public:
 		double value;
 		ros::NodeHandle lnh("~");
 		m_nodeName = node_name;
-
-		if(!lnh.getParam("sensor_dev", value))
-			value = 0.2;
-		m_sensorDev = (float)value;
 		m_mapPath = map_path;
 		// Load octomap 
 		m_octomap = NULL;
@@ -234,28 +217,6 @@ public:
 		if(m_triGrid != NULL)
 			delete []m_triGrid;
 	}
-
-	float computeCloudWeight(std::vector<pcl::PointXYZ> &points)
-	{
-		float weight = 0.;
-		int n = 0;
-
-		for(int i=0; i<points.size(); i++)
-		{
-			const pcl::PointXYZ& p = points[i];
-			if(p.x >= 0.0 && p.y >= 0.0 && p.z >= 0.0 && p.x < m_maxX && p.y < m_maxY && p.z < m_maxZ)
-			{
-				int index = point2grid(p.x, p.y, p.z);
-				weight += m_grid[index].prob;
-				n++;
-			}
-		}
-
-		if(n > 10)
-			return weight/n;
-		else
-			return 0;
-	}
   
 	void publishMapPointCloud(void)
 	{
@@ -276,12 +237,7 @@ public:
 
 	double getPointDist(double x, double y, double z)
 	{
-		return m_grid[point2grid(x, y, z)].dist;
-	}
-
-	double getPointDistProb(double x, double y, double z)
-	{
-		return m_grid[point2grid(x, y, z)].prob;
+		return m_grid[point2grid(x, y, z)]*0.01;
 	}
 
 	TrilinearParams getPointDistInterpolation(double x, double y, double z)
@@ -303,14 +259,14 @@ public:
 
 			// Get neightbour values to compute trilinear interpolation
 			float c000, c001, c010, c011, c100, c101, c110, c111;
-			c000 = m_grid[i].dist; 
-			c001 = m_grid[i+m_gridStepZ].dist; 
-			c010 = m_grid[i+m_gridStepY].dist; 
-			c011 = m_grid[i+m_gridStepY+m_gridStepZ].dist; 
-			c100 = m_grid[i+1].dist; 
-			c101 = m_grid[i+1+m_gridStepZ].dist; 
-			c110 = m_grid[i+1+m_gridStepY].dist; 
-			c111 = m_grid[i+1+m_gridStepY+m_gridStepZ].dist; 
+			c000 = m_grid[i]*0.01; 
+			c001 = m_grid[i+m_gridStepZ]*0.01; 
+			c010 = m_grid[i+m_gridStepY]*0.01; 
+			c011 = m_grid[i+m_gridStepY+m_gridStepZ]*0.01; 
+			c100 = m_grid[i+1]*0.01; 
+			c101 = m_grid[i+1+m_gridStepZ]*0.01; 
+			c110 = m_grid[i+1+m_gridStepY]*0.01; 
+			c111 = m_grid[i+1+m_gridStepY+m_gridStepZ]*0.01; 
 
 			// Compute trilinear parameters
 			const float div = -m_oneDivRes*m_oneDivRes*m_oneDivRes;
@@ -368,14 +324,14 @@ public:
 					TrilinearParams p;
 					count++;
 
-					c000 = m_grid[(ix+0) + (iy+0)*m_gridStepY + (iz+0)*m_gridStepZ].dist;
-					c001 = m_grid[(ix+0) + (iy+0)*m_gridStepY + (iz+1)*m_gridStepZ].dist;
-					c010 = m_grid[(ix+0) + (iy+1)*m_gridStepY + (iz+0)*m_gridStepZ].dist;
-					c011 = m_grid[(ix+0) + (iy+1)*m_gridStepY + (iz+1)*m_gridStepZ].dist;
-					c100 = m_grid[(ix+1) + (iy+0)*m_gridStepY + (iz+0)*m_gridStepZ].dist;
-					c101 = m_grid[(ix+1) + (iy+0)*m_gridStepY + (iz+1)*m_gridStepZ].dist;
-					c110 = m_grid[(ix+1) + (iy+1)*m_gridStepY + (iz+0)*m_gridStepZ].dist;
-					c111 = m_grid[(ix+1) + (iy+1)*m_gridStepY + (iz+1)*m_gridStepZ].dist;
+					c000 = m_grid[(ix+0) + (iy+0)*m_gridStepY + (iz+0)*m_gridStepZ]*0.01;
+					c001 = m_grid[(ix+0) + (iy+0)*m_gridStepY + (iz+1)*m_gridStepZ]*0.01;
+					c010 = m_grid[(ix+0) + (iy+1)*m_gridStepY + (iz+0)*m_gridStepZ]*0.01;
+					c011 = m_grid[(ix+0) + (iy+1)*m_gridStepY + (iz+1)*m_gridStepZ]*0.01;
+					c100 = m_grid[(ix+1) + (iy+0)*m_gridStepY + (iz+0)*m_gridStepZ]*0.01;
+					c101 = m_grid[(ix+1) + (iy+0)*m_gridStepY + (iz+1)*m_gridStepZ]*0.01;
+					c110 = m_grid[(ix+1) + (iy+1)*m_gridStepY + (iz+0)*m_gridStepZ]*0.01;
+					c111 = m_grid[(ix+1) + (iy+1)*m_gridStepY + (iz+1)*m_gridStepZ]*0.01;
 					
 					p.a0 = (-c000*x1*y1*z1 + c001*x1*y1*z0 + c010*x1*y0*z1 - c011*x1*y0*z0 
 					+ c100*x0*y1*z1 - c101*x0*y1*z0 - c110*x0*y0*z1 + c111*x0*y0*z0)*div;
@@ -542,6 +498,9 @@ protected:
 		m_maxX = (float)(maxX-minX);
 		m_maxY = (float)(maxY-minY);
 		m_maxZ = (float)(maxZ-minZ);
+		m_offsetX = minX;
+		m_offsetY = minY;
+		m_offsetZ = minZ;
 		m_resolution = (float)res;
 		m_oneDivRes = 1.0/m_resolution;
 		std::cout << "Map size:\n\tx: " << minX << " to " << maxX << std::endl;
@@ -565,14 +524,18 @@ protected:
 		}
 		
 		// Write grid general info 
+		int version = 2;
+		fwrite(&version, sizeof(int), 1, pf);
 		fwrite(&m_gridSize, sizeof(int), 1, pf);
 		fwrite(&m_gridSizeX, sizeof(int), 1, pf);
 		fwrite(&m_gridSizeY, sizeof(int), 1, pf);
 		fwrite(&m_gridSizeZ, sizeof(int), 1, pf);
-		fwrite(&m_sensorDev, sizeof(float), 1, pf);
+		fwrite(&m_offsetX, sizeof(float), 1, pf);
+		fwrite(&m_offsetY, sizeof(float), 1, pf);
+		fwrite(&m_offsetZ, sizeof(float), 1, pf);
 		
 		// Write grid cells
-		fwrite(m_grid, sizeof(gridCell), m_gridSize, pf);
+		fwrite(m_grid, sizeof(uint16_t), m_gridSize, pf);
 		
 		// Close file
 		fclose(pf);
@@ -593,19 +556,28 @@ protected:
 		}
 		
 		// Write grid general info 
+		int version;
+		fread(&version, sizeof(int), 1, pf);
+		if(version != 2)
+		{
+			std::cout << "Incorrect grid file encoding version. " << fileName << " has version " <<  version << ", version 2 required." << std::endl;
+			return false;
+		}
 		fread(&m_gridSize, sizeof(int), 1, pf);
 		fread(&m_gridSizeX, sizeof(int), 1, pf);
 		fread(&m_gridSizeY, sizeof(int), 1, pf);
 		fread(&m_gridSizeZ, sizeof(int), 1, pf);
-		fread(&m_sensorDev, sizeof(float), 1, pf);
+		fread(&m_offsetX, sizeof(float), 1, pf);
+		fread(&m_offsetY, sizeof(float), 1, pf);
+		fread(&m_offsetZ, sizeof(float), 1, pf);
 		m_gridStepY = m_gridSizeX;
 		m_gridStepZ = m_gridSizeX*m_gridSizeY;
 		
 		// Write grid cells
 		if(m_grid != NULL)
 			delete []m_grid;
-		m_grid = new gridCell[m_gridSize];
-		fread(m_grid, sizeof(gridCell), m_gridSize, pf);
+		m_grid = new uint16_t[m_gridSize];
+		fread(m_grid, sizeof(uint16_t), m_gridSize, pf);
 		
 		// Close file
 		fclose(pf);
@@ -648,9 +620,6 @@ protected:
 	
 	void computeGrid(void)
 	{
-		//Publish percent variable
-		std_msgs::Float32 percent_msg;
-		percent_msg.data = 0;
 		// Alloc the 3D grid
 		m_gridSizeX = (int)(m_maxX*m_oneDivRes);
 		m_gridSizeY = (int)(m_maxY*m_oneDivRes); 
@@ -658,24 +627,20 @@ protected:
 		m_gridSize = m_gridSizeX*m_gridSizeY*m_gridSizeZ;
 		m_gridStepY = m_gridSizeX;
 		m_gridStepZ = m_gridSizeX*m_gridSizeY;
-		m_grid = new gridCell[m_gridSize];
+		m_grid = new uint16_t[m_gridSize];
 
 		// Setup kdtree
 		m_kdtree.setInputCloud(m_cloud);
 
 		// Compute the distance to the closest point of the grid
-		int index;
-		float dist;
-		float gaussConst1 = 1./(m_sensorDev*sqrt(2*M_PI));
-		float gaussConst2 = 1./(2*m_sensorDev*m_sensorDev);
-		pcl::PointXYZ searchPoint;
-		std::vector<int> pointIdxNKNSearch(1);
-		std::vector<float> pointNKNSquaredDistance(1);
-		double count=0;
-		double percent;
-		double size=m_gridSizeX*m_gridSizeY*m_gridSizeZ;
+		#pragma omp parallel for num_threads(16) shared(m_grid) 
 		for(int iz=0; iz<m_gridSizeZ; iz++)
 		{
+			int index;
+			pcl::PointXYZ searchPoint;
+			std::vector<int> pointIdxNKNSearch(1);
+			std::vector<float> pointNKNSquaredDistance(1);
+			printf("Processing z=%d out of %d\n", iz, m_gridSizeZ );
 			for(int iy=0; iy<m_gridSizeY; iy++)
 			{
 				for(int ix=0; ix<m_gridSizeX; ix++)
@@ -684,25 +649,14 @@ protected:
 					searchPoint.y = iy*m_resolution;
 					searchPoint.z = iz*m_resolution;
 					index = ix + iy*m_gridStepY + iz*m_gridStepZ;
-					++count;
-					percent = count/size *100.0;
-					printf("Computing grid map: %3.6lf%%        \r", percent);
-					
 					if(m_kdtree.nearestKSearch(searchPoint, 1, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-					{
-						dist = pointNKNSquaredDistance[0];
-						m_grid[index].dist = dist;
-						m_grid[index].prob = gaussConst1*exp(-dist*dist*gaussConst2);
-					}
+						m_grid[index] = (uint16_t)(sqrt(pointNKNSquaredDistance[0])*100.0);
 					else
-					{
-						m_grid[index].dist = -1.0;
-						m_grid[index].prob =  0.0;
-					}
-
+						m_grid[index] = 0.0;
 				}
 			}
 		}
+		#pragma omp barrier
 	}
 	
 	void buildGridSliceMsg(float z)
@@ -726,20 +680,20 @@ protected:
 		m_gridSliceMsg.info.origin.orientation.w = 1.0;
 		m_gridSliceMsg.data.resize(m_gridSizeX*m_gridSizeY);
 
-		// Extract max probability
+		// Extract max distance
 		int offset = (int)(z*m_oneDivRes)*m_gridSizeX*m_gridSizeY;
 		int end = offset + m_gridSizeX*m_gridSizeY;
 		float maxProb = -1.0;
 		for(int i=offset; i<end; i++)
-			if(m_grid[i].prob > maxProb)
-				maxProb = m_grid[i].prob;
+			if(m_grid[i] > maxProb)
+				maxProb = m_grid[i];
 
 		// Copy data into grid msg and scale the probability to [0,100]
 		if(maxProb < 0.000001)
 			maxProb = 0.000001;
 		maxProb = 100.0/maxProb;
 		for(int i=0; i<m_gridSizeX*m_gridSizeY; i++)
-			m_gridSliceMsg.data[i] = (int8_t)(m_grid[i+offset].prob*maxProb);
+			m_gridSliceMsg.data[i] = (int8_t)(m_grid[i+offset]*maxProb);
 	}
 	
 	inline int point2grid(const float &x, const float &y, const float &z)
