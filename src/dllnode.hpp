@@ -46,9 +46,6 @@ public:
 		if (!lnh.getParam("use_yaw_increments", m_useYawIncrements)) 
 			m_useYawIncrements = false;
 		m_roll_imu = m_pitch_imu = m_yaw_imu = 0.0;
-
-		lnh.param("n_downsample", m_n_downsample, 1);
-		ROS_INFO("Taking only one of %d samples", m_n_downsample);
 		
 		// Read DLL parameters
 		if(!lnh.getParam("update_rate", m_updateRate))
@@ -75,6 +72,8 @@ public:
 			m_solverMaxIter = 75;
 		if(!lnh.getParam("solver_max_threads", m_solverMaxThreads))
 			m_solverMaxThreads = 8;
+		lnh.param("n_downsample", m_n_downsample, 1);
+		ROS_INFO("Taking only one of each %d PC samples", m_n_downsample);
 		
 		// Init internal variables
 		m_init = false;
@@ -422,6 +421,7 @@ private:
 	//! Use IMU flag
 	bool m_use_imu, m_useYawIncrements;
 
+	//! To take one of each n samples (defaults to 1 --> keep all samples)
 	int m_n_downsample;
 	
 	//! Indicates that the local transfrom for the pint-cloud is cached
