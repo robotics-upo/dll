@@ -23,6 +23,10 @@
 #include <pcl/registration/ndt.h>
 #include <pcl/filters/approximate_voxel_grid.h>
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
+
 struct TrilinearParams
 {
 	float a0, a1, a2, a3, a4, a5, a6, a7;
@@ -58,8 +62,8 @@ private:
 	
 	// 3D probabilistic grid cell
 	uint16_t *m_grid;
-	int m_gridSize, m_gridSizeX, m_gridSizeY, m_gridSizeZ;
-	int m_gridStepY, m_gridStepZ;
+	uint64_t m_gridSize, m_gridSizeX, m_gridSizeY, m_gridSizeZ;
+	uint64_t m_gridStepY, m_gridStepZ;
 	
 	// 3D point clound representation of the map
 	pcl::PointCloud<pcl::PointXYZ>::Ptr m_cloud;
@@ -252,7 +256,7 @@ public:
 	{
 		TrilinearParams r;
 
-		if(isIntoMap(x, y, z))
+		if(isIntoMap(x, y, z) && isIntoMap(x+m_resolution, y+m_resolution, z+m_resolution))
 		{
 			// Get 3D point index
 			uint64_t i = point2grid(x, y, z); 
@@ -524,12 +528,12 @@ protected:
 		}
 		
 		// Write grid general info 
-		int version = 2;
+		int version = 3;
 		fwrite(&version, sizeof(int), 1, pf);
-		fwrite(&m_gridSize, sizeof(int), 1, pf);
-		fwrite(&m_gridSizeX, sizeof(int), 1, pf);
-		fwrite(&m_gridSizeY, sizeof(int), 1, pf);
-		fwrite(&m_gridSizeZ, sizeof(int), 1, pf);
+		fwrite(&m_gridSize, sizeof(uint64_t), 1, pf);
+		fwrite(&m_gridSizeX, sizeof(uint64_t), 1, pf);
+		fwrite(&m_gridSizeY, sizeof(uint64_t), 1, pf);
+		fwrite(&m_gridSizeZ, sizeof(uint64_t), 1, pf);
 		fwrite(&m_offsetX, sizeof(float), 1, pf);
 		fwrite(&m_offsetY, sizeof(float), 1, pf);
 		fwrite(&m_offsetZ, sizeof(float), 1, pf);
@@ -558,15 +562,15 @@ protected:
 		// Write grid general info 
 		int version;
 		fread(&version, sizeof(int), 1, pf);
-		if(version != 2)
+		if(version != 3)
 		{
-			std::cout << "Incorrect grid file encoding version. " << fileName << " has version " <<  version << ", version 2 required." << std::endl;
+			std::cout << "Incorrect grid file encoding version. " << fileName << " has version " <<  version << ", version 3 required." << std::endl;
 			return false;
 		}
-		fread(&m_gridSize, sizeof(int), 1, pf);
-		fread(&m_gridSizeX, sizeof(int), 1, pf);
-		fread(&m_gridSizeY, sizeof(int), 1, pf);
-		fread(&m_gridSizeZ, sizeof(int), 1, pf);
+		fread(&m_gridSize, sizeof(uint64_t), 1, pf);
+		fread(&m_gridSizeX, sizeof(uint64_t), 1, pf);
+		fread(&m_gridSizeY, sizeof(uint64_t), 1, pf);
+		fread(&m_gridSizeZ, sizeof(uint64_t), 1, pf);
 		fread(&m_offsetX, sizeof(float), 1, pf);
 		fread(&m_offsetY, sizeof(float), 1, pf);
 		fread(&m_offsetZ, sizeof(float), 1, pf);
@@ -621,9 +625,9 @@ protected:
 	void computeGrid(void)
 	{
 		// Alloc the 3D grid
-		m_gridSizeX = (int)(m_maxX*m_oneDivRes);
-		m_gridSizeY = (int)(m_maxY*m_oneDivRes); 
-		m_gridSizeZ = (int)(m_maxZ*m_oneDivRes);
+		m_gridSizeX = (uint64_t)(m_maxX*m_oneDivRes);
+		m_gridSizeY = (uint64_t)(m_maxY*m_oneDivRes); 
+		m_gridSizeZ = (uint64_t)(m_maxZ*m_oneDivRes);
 		m_gridSize = m_gridSizeX*m_gridSizeY*m_gridSizeZ;
 		m_gridStepY = m_gridSizeX;
 		m_gridStepZ = m_gridSizeX*m_gridSizeY;
@@ -636,11 +640,11 @@ protected:
 		#pragma omp parallel for num_threads(16) shared(m_grid) 
 		for(int iz=0; iz<m_gridSizeZ; iz++)
 		{
-			int index;
+			uint64_t index;
 			pcl::PointXYZ searchPoint;
 			std::vector<int> pointIdxNKNSearch(1);
 			std::vector<float> pointNKNSquaredDistance(1);
-			printf("Processing z=%d out of %d\n", iz, m_gridSizeZ );
+			printf("Processing z=%i out of %lu\n", iz, m_gridSizeZ);
 			for(int iy=0; iy<m_gridSizeY; iy++)
 			{
 				for(int ix=0; ix<m_gridSizeX; ix++)
@@ -696,9 +700,9 @@ protected:
 			m_gridSliceMsg.data[i] = (int8_t)(m_grid[i+offset]*maxProb);
 	}
 	
-	inline int point2grid(const float &x, const float &y, const float &z)
+	inline uint64_t point2grid(const float &x, const float &y, const float &z)
 	{
-		return (int)(x*m_oneDivRes) + (int)(y*m_oneDivRes)*m_gridStepY + (int)(z*m_oneDivRes)*m_gridStepZ;
+		return (uint64_t)(x*m_oneDivRes) + ((uint64_t)(y*m_oneDivRes))*m_gridStepY + ((uint64_t)(z*m_oneDivRes))*m_gridStepZ;
 	}
 };
 
