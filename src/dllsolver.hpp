@@ -177,11 +177,11 @@ class DLLSolver
             ny = sa*p[i].x + ca*p[i].y + ty;
             nz = p[i].z + tz;
 
+            // Remove points out of the grid-map
             if(_grid.isIntoMap(nx, ny, nz))
             {           
-                float d = sqrt(p[i].x*p[i].x + p[i].y*p[i].y + p[i].z*p[i].z);
                 CostFunction* cost_function = new DLLCostFunction(p[i].x, p[i].y, p[i].z, _grid);
-                problem.AddResidualBlock(cost_function, new ceres::CauchyLoss(_robusKernelScale*(0.1+0.1*d)), x); 
+                problem.AddResidualBlock(cost_function, new ceres::CauchyLoss(0.1), x); 
             }
         }
 
