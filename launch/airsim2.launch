@@ -8,17 +8,17 @@
   # Bag file
   <node name="bag_player" type="play" pkg="rosbag" args="airsim2.bag -s 0 -r 1.0 --clock " />
 
-  # Fake odometry. You better use a good odometry estrimator as LOAM
+  # Fake odometry. You HAVE to use a good odometry estrimator as LOAM
   <node pkg="tf" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom drone_1 10" />
   
   # airsim map conf
   <arg name="base_frame_id" default="drone_1"/>
   <arg name="odom_frame_id" default="odom"/>
   <arg name="global_frame_id" default="map"/>
-  <arg name="initial_x" default="11.972859"/> 
-  <arg name="initial_y" default="8.465337"/>
-  <arg name="initial_z" default="7.488974"/>
-  <arg name="initial_a" default="1.6"/> 
+  <arg name="initial_x" default="11.4"/> 
+  <arg name="initial_y" default="9.3"/> 
+  <arg name="initial_z" default="7.4"/> 
+  <arg name="initial_a" default="1.5"/> 
   <arg name="map" default="airsim.bt" />
   <arg name="map_path" default="$(find dll)/maps/$(arg map)"/>
 
