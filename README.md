@@ -3,14 +3,14 @@
 ## Summary
 This package presents DLL, a direct map-based localization technique using 3D LIDAR for its application to aerial robots. DLL implements a point cloud to map registration based on non-linear optimization of the distance of the points and the map, thus not requiring  features, neither point correspondences. Given an initial pose, the method is able to track the pose of the robot by refining the predicted pose from odometry. The method performs much better than Monte-Carlo localization methods and achieves comparable precision to other optimization-based approaches but running one order of magnitude faster. The method is also robust under odometric errors. 
 
-DLL is fully integarted in Robot Operating System (ROS). It follows the general localization apparoch of ROS, DLL makes use of sensor data to compute the transform that better fits the robot odometry TF into the map. Although an odometry system is recommended for fast and accurate localization, DLL also performs well without odometry information if the robot moves smoothly. 
+DLL is fully integrated in Robot Operating System (ROS2). It follows the general localization apparoch of ROS, DLL makes use of sensor data to compute the transform that better fits the robot odometry TF into the map. Although an odometry system is recommended for fast and accurate localization, DLL also performs well without odometry information if the robot moves smoothly. 
 
 ![DLL experimental results in different setups](dll_video.gif)
 
 ## Software dependencies
 There are not hard dependencies except for Google Ceres Solver and ROS:
  - ceres: Follow installation instructions for Google Ceres (http://ceres-solver.org/installation.html)
- - ROS: The package has been tested in ROS Melodic under Ubuntu 18.04. Follow installation instruction from ROS (http://wiki.ros.org/melodic/Installation/Ubuntu)
+ - ROS2: The package has been tested in ROS2 Humble under Ubuntu 22.04. Follow installation instructions from ROS (http://wiki.ros.org/humble/Installation/Ubuntu)
 
 ## Hardware requirements
 DLL has been tested in a 10th generation Intel i7 processor, with 16GB of RAM. No graphics card is needed. The optimization is currently configured to be single threaded. You can easily reduce the processing time by a 33% just increasing the number of threads used by Ceres Solver.
@@ -19,7 +19,7 @@ DLL has been tested in a 10th generation Intel i7 processor, with 16GB of RAM. N
 Download this source code into the src folder of your catkin worksapce:
 ```
 $ cd catkin_ws/src
-$ git clone https://github.com/robotics-upo/dll
+$ git clone https://github.com/robotics-upo/dll -b Humble
 ```
 Compile the project:
 ```

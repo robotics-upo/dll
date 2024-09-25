@@ -6,10 +6,10 @@
   <param name="use_sim_time" value="true" /> 
 
   # Bag file
-  <node name="bag_player" type="play" pkg="rosbag" args="airsim1.bag -s 0 -r 1.0 --clock " />
+  <node name="bag_player" exec="play" pkg="ros2bag" args="airsim1.bag -s 0 -r 1.0 --clock " />
 
   # Fake odometry. You HAVE to use a good odometry estrimator as LOAM
-  <node pkg="tf" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom drone_1 10" />
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom drone_1 10" />
   
   # airsim map conf
   <arg name="base_frame_id" default="drone_1"/>
@@ -20,10 +20,10 @@
   <arg name="initial_z" default="6.9"/> 
   <arg name="initial_a" default="1.5"/>  
   <arg name="map" default="airsim.bt" />
-  <arg name="map_path" default="$(find dll)/maps/$(arg map)"/>
+  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(arg map)"/>
 
   # Launch DLL
-  <node name="dll_node" type="dll_node" pkg="dll" output="screen">
+  <node name="dll_node" exec="dll_node" pkg="dll" output="screen">
     <remap from="/dll_node/initial_pose" to="/initialpose"/>
     <remap from="/imu" to="/airsim_node/drone_1/imu/Imu"/>
     <param name="in_cloud" value="/airsim_node/drone_1/lidar/Lidar2" />
@@ -47,6 +47,6 @@
     
   </node>
 
-  <node name="rviz" type="rviz" pkg="rviz" args="-d $(find dll)/launch/airsim.rviz" output="screen"/>
+  <node name="rviz2" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/airsim.rviz" output="screen"/>
 
 </launch>	

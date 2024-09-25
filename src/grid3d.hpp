@@ -8,10 +8,10 @@
  */
 
 #include <sys/time.h>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
-#include <nav_msgs/OccupancyGrid.h>
+#include <nav_msgs/msg/occupancy_grid.hpp>
 #include <stdio.h> 
 
 // PCL
@@ -42,18 +42,21 @@ struct TrilinearParams
 	}
 };
 
-class Grid3d
+// Fernando: el Grid3d no va a ser ya un nodo, haremos un nodo simple para Grid3d en grid3d_node.cpp
+// A partir de ahora intenta compialar dll_node
+class Grid3d 
 {
 private:
 	
 	// Ros parameters
-	ros::NodeHandle m_nh;
 	bool m_saveGrid, m_publishPc;
 	std::string m_mapPath, m_nodeName;
 	std::string m_globalFrameId;
 	float m_gridSlice;
+
 	double m_publishPointCloudRate, m_publishGridSliceRate;
-	
+
+	// Ya no publicamos aquí, que publique el nodo simple
 	// Octomap parameters
 	float m_maxX, m_maxY, m_maxZ;
 	float m_resolution, m_oneDivRes;
@@ -70,15 +73,9 @@ private:
 	pcl::KdTreeFLANN<pcl::PointXYZ> m_kdtree;
 	
 	// Visualization of the map as pointcloud
-	sensor_msgs::PointCloud2 m_pcMsg;
-	ros::Publisher m_pcPub;
-	ros::Timer mapTimer;
-			
+	sensor_msgs::msg::PointCloud2 m_pcMsg;
 	// Visualization of a grid slice as 2D grid map msg
-	nav_msgs::OccupancyGrid m_gridSliceMsg;
-	ros::Publisher m_gridSlicePub;
-	ros::Timer gridTimer;
-
+	nav_msgs::msg::OccupancyGrid m_gridSliceMsg;
 	// Trilinear approximation parameters (for each grid cell)
 	TrilinearParams *m_triGrid;
 
@@ -89,88 +86,88 @@ private:
 	pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> m_ndt;
 	
 public:
-	Grid3d(std::string &node_name) : m_cloud(new pcl::PointCloud<pcl::PointXYZ>), m_triGrid(NULL)
-	{
-	  
-		// Load paraeters
-		double value;
-		ros::NodeHandle lnh("~");
-		m_nodeName = node_name;
-		if(!lnh.getParam("global_frame_id", m_globalFrameId))
-			m_globalFrameId = "map";	
-		if(!lnh.getParam("map_path", m_mapPath))
-			m_mapPath = "map.ot";
-		if(!lnh.getParam("publish_point_cloud", m_publishPc))
-			m_publishPc = false;
-		if(!lnh.getParam("publish_point_cloud_rate", m_publishPointCloudRate))
-			m_publishPointCloudRate = 0.2;	
-		if(!lnh.getParam("publish_grid_slice", value))
-			value = -1.0;
-		if(!lnh.getParam("publish_grid_slice_rate", m_publishGridSliceRate))
-			m_publishGridSliceRate = 0.2;
-		m_gridSlice = (float)value;
+
+	//Constructor with node
+	// Grid3d(rclcpp::Node *ros_node) : m_cloud(new pcl::PointCloud<pcl::PointXYZ>), m_triGrid(NULL)
+	// {
+	// 	// Load parameters
+	// 	double value;
+	// 	m_nodeName = node_name;
+	// 	ros_node->declare_parameter("global_frame_id","map");
+	// 	ros_node->declare_parameter("map_path","map.ot");
+	// 	ros_node->declare_parameter("publish_point_cloud",false);
+	// 	ros_node->declare_parameter("publish_point_cloud_rate",0.2);
+	// 	ros_node->declare_parameter("publish_grid_slice",-1.0);
+	// 	ros_node->declare_parameter("publish_grid_slice_rate",0.2);
+
+	// 	ros_node->get_parameter("global_frame_id",m_globalFrameId);
+	// 	ros_node->get_parameter("map_path",m_mapPath);
+	// 	ros_node->get_parameter("publish_point_cloud",m_publishPc);
+	// 	ros_node->get_parameter("publish_point_cloud_rate",m_publishPointCloudRate);
+	// 	ros_node->get_parameter("publish_grid_slice",value);
+	// 	ros_node->get_parameter("publish_grid_slice_rate",m_publishGridSliceRate);
+	// 	m_gridSlice = (float)value;
 		
-		// Load octomap 
-		m_octomap = NULL;
-		m_grid = NULL;
-		if(loadOctomap(m_mapPath))
-		{
-			// Compute the point-cloud associated to the ocotmap
-			computePointCloud();
+	// 	// Load octomap 
+	// 	m_octomap = NULL;
+	// 	m_grid = NULL;
+	// 	if(loadOctomap(m_mapPath))
+	// 	{
+	// 		// Compute the point-cloud associated to the ocotmap
+	// 		computePointCloud();
 			
-			// Try to load tha associated grid-map from file
-			std::string path;
-			if(m_mapPath.compare(m_mapPath.length()-3, 3, ".bt") == 0)
-				path = m_mapPath.substr(0,m_mapPath.find(".bt"))+".grid";
-			if(m_mapPath.compare(m_mapPath.length()-3, 3, ".ot") == 0)
-				path = m_mapPath.substr(0,m_mapPath.find(".ot"))+".grid";
-			if(!loadGrid(path))
-			{						
-				// Compute the gridMap using kdtree search over the point-cloud
-				std::cout << "Computing 3D occupancy grid. This will take some time..." << std::endl;
-				computeGrid();
-				std::cout << "\tdone!" << std::endl;
+	// 		// Try to load tha associated grid-map from file
+	// 		std::string path;
+	// 		if(m_mapPath.compare(m_mapPath.length()-3, 3, ".bt") == 0)
+	// 			path = m_mapPath.substr(0,m_mapPath.find(".bt"))+".grid";
+	// 		if(m_mapPath.compare(m_mapPath.length()-3, 3, ".ot") == 0)
+	// 			path = m_mapPath.substr(0,m_mapPath.find(".ot"))+".grid";
+	// 		if(!loadGrid(path))
+	// 		{						
+	// 			// Compute the gridMap using kdtree search over the point-cloud
+	// 			std::cout << "Computing 3D occupancy grid. This will take some time..." << std::endl;
+	// 			computeGrid();
+	// 			std::cout << "\tdone!" << std::endl;
 				
-				// Save grid on file
-				if(saveGrid(path))
-					std::cout << "Grid map successfully saved on " << path << std::endl;
-			}
+	// 			// Save grid on file
+	// 			if(saveGrid(path))
+	// 				std::cout << "Grid map successfully saved on " << path << std::endl;
+	// 		}
 			
-			// Build the msg with a slice of the grid if needed
-			if(m_gridSlice >= 0 && m_gridSlice <= m_maxZ)
-			{
-				buildGridSliceMsg(m_gridSlice);
-				m_gridSlicePub = m_nh.advertise<nav_msgs::OccupancyGrid>(node_name+"/grid_slice", 1, true);
-				gridTimer = m_nh.createTimer(ros::Duration(1.0/m_publishGridSliceRate), &Grid3d::publishGridSliceTimer, this);	
-			}
+	// 		// Build the msg with a slice of the grid if needed
+	// 		if(m_gridSlice >= 0 && m_gridSlice <= m_maxZ)
+	// 		{
+	// 			buildGridSliceMsg(m_gridSlice);
+	// 			m_gridSlicePub = ros_node->create_publisher<nav_msgs::msg::OccupancyGrid>(node_name+"/grid_slice", 1, true);
+	// 			ros_node->create_wall_timer(rclcpp::Duration(1.0/m_publishGridSliceRate), &Grid3d::publishGridSliceTimer, this);	
+	// 		}
 			
-			// Setup point-cloud publisher
-			if(m_publishPc)
-			{
-				m_pcPub = m_nh.advertise<sensor_msgs::PointCloud2>(node_name+"/map_point_cloud", 1, true);
-				mapTimer = m_nh.createTimer(ros::Duration(1.0/m_publishPointCloudRate), &Grid3d::publishMapPointCloudTimer, this);
-			}
-		}
+	// 		// Setup point-cloud publisher
+	// 		if(m_publishPc)
+	// 		{
+	// 			m_pcPub = ros_node->create_publisher<sensor_msgs::msg::PointCloud2>(node_name+"/map_point_cloud", 1, true);
+	// 			ros_node->create_wall_timer(rclcpp::Duration(1.0/m_publishPointCloudRate), &Grid3d::publishMapPointCloudTimer, this);
+	// 		}
+	// 	}
 
-		// Setup ICP
-		m_icp.setMaximumIterations (50);
-  		m_icp.setMaxCorrespondenceDistance (0.1);
-  		m_icp.setRANSACOutlierRejectionThreshold (1.0);
+	// 	// Setup ICP
+	// 	m_icp.setMaximumIterations (50);
+  	// 	m_icp.setMaxCorrespondenceDistance (0.1);
+  	// 	m_icp.setRANSACOutlierRejectionThreshold (1.0);
 
-		// Setup NDT
-		m_ndt.setTransformationEpsilon (0.01);  // Setting minimum transformation difference for termination condition.
-  		m_ndt.setStepSize (0.1);   // Setting maximum step size for More-Thuente line search.
-  		m_ndt.setResolution (1.0);   //Setting Resolution of NDT grid structure (VoxelGridCovariance).
-		m_ndt.setMaximumIterations (50);   // Setting max number of registration iterations.
-	}
+	// 	// Setup NDT
+	// 	m_ndt.setTransformationEpsilon (0.01);  // Setting minimum transformation difference for termination condition.
+  	// 	m_ndt.setStepSize (0.1);   // Setting maximum step size for More-Thuente line search.
+  	// 	m_ndt.setResolution (1.0);   //Setting Resolution of NDT grid structure (VoxelGridCovariance).
+	// 	m_ndt.setMaximumIterations (50);   // Setting max number of registration iterations.
+	// }
 
-	Grid3d(std::string &node_name, std::string &map_path) : m_cloud(new pcl::PointCloud<pcl::PointXYZ>), m_triGrid(NULL)
+	// Constructor without node
+	// No longer used
+	Grid3d(const std::string &map_path) : m_cloud(new pcl::PointCloud<pcl::PointXYZ>), m_triGrid(NULL)
 	{
 	  
-		// Load paraeters
-		double value;
-		ros::NodeHandle lnh("~");
-		m_nodeName = node_name;
+		// Initialize attributes
 		m_mapPath = map_path;
 		// Load octomap 
 		m_octomap = NULL;
@@ -211,6 +208,7 @@ public:
   		m_ndt.setResolution (1.0);   //Setting Resolution of NDT grid structure (VoxelGridCovariance).
 		m_ndt.setMaximumIterations (50);   // Setting max number of registration iterations.
 	}
+	friend class Grid3dNode;
 
 	~Grid3d(void)
 	{
@@ -222,18 +220,7 @@ public:
 			delete []m_triGrid;
 	}
   
-	void publishMapPointCloud(void)
-	{
-		m_pcMsg.header.stamp = ros::Time::now();
-		m_pcPub.publish(m_pcMsg);
-	}
-	
-	void publishGridSlice(void)
-	{
-		m_gridSliceMsg.header.stamp = ros::Time::now();
-		m_gridSlicePub.publish(m_gridSliceMsg);
-	}
-	
+
 	bool isIntoMap(double x, double y, double z)
 	{
 		return (x >= 0.0 && y >= 0.0 && z >= 0.0 && x < m_maxX && y < m_maxY && z < m_maxZ);
@@ -312,7 +299,7 @@ public:
 		m_triGrid = new TrilinearParams[m_gridSize];
 
 		// Compute the distance to the closest point of the grid
-		int ix, iy, iz;
+		unsigned int ix, iy, iz;
 		double count = 0.0;
 		double size = m_gridSizeX*m_gridSizeY*m_gridSizeZ;
 		double x0, y0, z0, x1, y1, z1;
@@ -442,17 +429,9 @@ public:
 
 protected:
 
-	void publishMapPointCloudTimer(const ros::TimerEvent& event)
-	{
-		publishMapPointCloud();
-	}
-	
-	void publishGridSliceTimer(const ros::TimerEvent& event)
-	{
-		publishGridSlice();
-	}
+	// TODO: migrate to grid3d_node.cpp
 
-	bool loadOctomap(std::string &path)
+	bool loadOctomap(const std::string &path)
 	{
 		// release previously loaded data
 		if(m_octomap != NULL)
@@ -638,16 +617,16 @@ protected:
 
 		// Compute the distance to the closest point of the grid
 		#pragma omp parallel for num_threads(16) shared(m_grid) 
-		for(int iz=0; iz<m_gridSizeZ; iz++)
+		for(unsigned int iz=0; iz<m_gridSizeZ; iz++)
 		{
 			uint64_t index;
 			pcl::PointXYZ searchPoint;
 			std::vector<int> pointIdxNKNSearch(1);
 			std::vector<float> pointNKNSquaredDistance(1);
 			printf("Processing z=%i out of %lu\n", iz, m_gridSizeZ);
-			for(int iy=0; iy<m_gridSizeY; iy++)
+			for(unsigned int iy=0; iy<m_gridSizeY; iy++)
 			{
-				for(int ix=0; ix<m_gridSizeX; ix++)
+				for(unsigned int ix=0; ix<m_gridSizeX; ix++)
 				{
 					searchPoint.x = ix*m_resolution;
 					searchPoint.y = iy*m_resolution;
@@ -665,13 +644,15 @@ protected:
 	
 	void buildGridSliceMsg(float z)
 	{
-		static int seq = 0;
+		// static int seq = 0; ROS2 header no longer has sequence number
 		
+		rclcpp::Clock clock;
+
 		// Setup grid msg
 		m_gridSliceMsg.header.frame_id = m_globalFrameId;
-		m_gridSliceMsg.header.stamp = ros::Time::now();
-		m_gridSliceMsg.header.seq = seq++;
-		m_gridSliceMsg.info.map_load_time = ros::Time::now();
+		m_gridSliceMsg.header.stamp = clock.now();
+		// m_gridSliceMsg.header.seq = seq++;
+		m_gridSliceMsg.info.map_load_time = clock.now();
 		m_gridSliceMsg.info.resolution = m_resolution;
 		m_gridSliceMsg.info.width = m_gridSizeX;
 		m_gridSliceMsg.info.height = m_gridSizeY;
@@ -696,7 +677,7 @@ protected:
 		if(maxProb < 0.000001)
 			maxProb = 0.000001;
 		maxProb = 100.0/maxProb;
-		for(int i=0; i<m_gridSizeX*m_gridSizeY; i++)
+		for(unsigned int i=0; i<m_gridSizeX*m_gridSizeY; i++)
 			m_gridSliceMsg.data[i] = (int8_t)(m_grid[i+offset]*maxProb);
 	}
 	

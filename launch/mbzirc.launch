@@ -6,7 +6,7 @@
   <param name="use_sim_time" value="true" /> 
 
   # Bag file
-  <node name="bag_player" type="play" pkg="rosbag" args="mbzirc.bag -s 0 -r 1.0 --clock " />
+  <node name="bag_player" exec="play" pkg="ros2bag" args="mbzirc.bag -s 0 -r 1.0 --clock " />
 
   # Odometry from odom to base_link already computed into the bag file
   # Odometry computed with LOAM
@@ -20,10 +20,10 @@
   <arg name="initial_z" default="1.0"/>
   <arg name="initial_a" default="-0.063"/> 
   <arg name="map" default="mbzirc.bt" />
-  <arg name="map_path" default="$(find dll)/maps/$(arg map)"/>
+  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(arg map)"/>
 
   # Launch DLL
-  <node name="dll_node" type="dll_node" pkg="dll" output="screen">
+  <node name="dll_node" exec="dll_node" pkg="dll" output="screen">
     <remap from="/dll_node/initial_pose" to="/initialpose"/>
     <remap from="/imu" to="/dji_sdk/imu"/>
     <param name="in_cloud" value="/os1_cloud_node/points_non_dense" />
@@ -47,6 +47,6 @@
    
   </node>
 
-  <node name="rviz" type="rviz" pkg="rviz" args="-d $(find dll)/launch/mbzirc.rviz" output="screen"/>
+  <node name="rviz" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/mbzirc.rviz" output="screen"/>
 
 </launch>	
