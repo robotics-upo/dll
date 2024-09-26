@@ -32,7 +32,7 @@ if(OPENMP_FOUND)
   set(OpenMP_FLAGS ${OpenMP_CXX_FLAGS})  # or if you use C: ${OpenMP_C_FLAGS}
   set(OpenMP_LIBS gomp)
 endif()
-add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-simd ${OpenMP_FLAGS})
+#add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-simd ${OpenMP_FLAGS})
 # 
 # add_executable(dll_node src/dll_node.cpp)
 # ament_target_dependencies(dll_node ament_cmake rclcpp tf2 geometry_msgs pcl_conversions pcl_ros sensor_msgs octomap nav_msgs tf2_geometry_msgs)

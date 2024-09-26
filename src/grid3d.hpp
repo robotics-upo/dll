@@ -49,12 +49,11 @@ class Grid3d
 private:
 	
 	// Ros parameters
-	bool m_saveGrid, m_publishPc;
+	bool m_saveGrid;
 	std::string m_mapPath, m_nodeName;
 	std::string m_globalFrameId;
 	float m_gridSlice;
 
-	double m_publishPointCloudRate, m_publishGridSliceRate;
 
 	// Ya no publicamos aquí, que publique el nodo simple
 	// Octomap parameters
@@ -98,14 +97,14 @@ public:
 	// 	ros_node->declare_parameter("publish_point_cloud",false);
 	// 	ros_node->declare_parameter("publish_point_cloud_rate",0.2);
 	// 	ros_node->declare_parameter("publish_grid_slice",-1.0);
-	// 	ros_node->declare_parameter("publish_grid_slice_rate",0.2);
+	// 
 
 	// 	ros_node->get_parameter("global_frame_id",m_globalFrameId);
 	// 	ros_node->get_parameter("map_path",m_mapPath);
 	// 	ros_node->get_parameter("publish_point_cloud",m_publishPc);
 	// 	ros_node->get_parameter("publish_point_cloud_rate",m_publishPointCloudRate);
 	// 	ros_node->get_parameter("publish_grid_slice",value);
-	// 	ros_node->get_parameter("publish_grid_slice_rate",m_publishGridSliceRate);
+	// 	
 	// 	m_gridSlice = (float)value;
 		
 	// 	// Load octomap 
@@ -175,8 +174,12 @@ public:
 		
 		if(loadOctomap(m_mapPath))
 		{
-			// Compute the point-cloud associated to the ocotmap
+
+			std::cout << "Octomap loaded\n";
+			// Compute the point-cloud associated to the octomap
 			computePointCloud();
+
+			std::cout << "Point Cloud computed" << std::endl;
 			
 			// Try to load tha associated grid-map from file
 			std::string path;
@@ -289,7 +292,7 @@ public:
 		return r;
 	}
 
-	bool computeTrilinearInterpolation(void)
+	bool computeTrilinearInterpolation()
 	{
 		// Delete existing parameters if the exists
 		if(m_triGrid != NULL)
@@ -301,9 +304,9 @@ public:
 		// Compute the distance to the closest point of the grid
 		unsigned int ix, iy, iz;
 		double count = 0.0;
-		double size = m_gridSizeX*m_gridSizeY*m_gridSizeZ;
+		double size = m_gridSizeX * m_gridSizeY * m_gridSizeZ;
 		double x0, y0, z0, x1, y1, z1;
-		double div = -1.0/(m_resolution*m_resolution*m_resolution);
+		double div = -1.0/(m_resolution * m_resolution * m_resolution);
 		for(iz=0, z0=0.0, z1=m_resolution; iz<m_gridSizeZ-1; iz++, z0+=m_resolution, z1+=m_resolution)
 		{
 			printf("Computing trilinear interpolation map: : %3.2lf%%        \r", count/size * 100.0);
@@ -428,8 +431,6 @@ public:
 	}
 
 protected:
-
-	// TODO: migrate to grid3d_node.cpp
 
 	bool loadOctomap(const std::string &path)
 	{
