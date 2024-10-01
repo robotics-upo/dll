@@ -4,14 +4,10 @@
 
 int main(int argc, char **argv)
 {
-	rclcpp::init(argc, argv, "dll_node");  
-	
-	// Particle filter instance
-	std::string node_name = "dll_node";
-	DLLNode node(node_name);
+	rclcpp::init(argc, argv);  
 	
 	// Process data at given rate
-	rclcpp::spin(node);
+	rclcpp::spin(std::make_shared<DLLNode>("dll_node"));
 
 	rclcpp::shutdown();
 

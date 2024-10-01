@@ -21,7 +21,8 @@ find_package(pcl_ros REQUIRED)
 find_package(octomap REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-
+find_package(Glog REQUIRED)
+find_package(tf2_ros)
 # Ceres solver
 find_package(Ceres REQUIRED)
 
@@ -32,18 +33,20 @@ if(OPENMP_FOUND)
   set(OpenMP_FLAGS ${OpenMP_CXX_FLAGS})  # or if you use C: ${OpenMP_C_FLAGS}
   set(OpenMP_LIBS gomp)
 endif()
-#add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-simd ${OpenMP_FLAGS})
-# 
-# add_executable(dll_node src/dll_node.cpp)
-# ament_target_dependencies(dll_node ament_cmake rclcpp tf2 geometry_msgs pcl_conversions pcl_ros sensor_msgs octomap nav_msgs tf2_geometry_msgs)
-# 
+add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-simd ${OpenMP_FLAGS})
+
+add_executable(dll_node src/dll_node.cpp)
+ament_target_dependencies(dll_node ament_cmake rclcpp tf2_ros tf2 tf2_geometry_msgs geometry_msgs pcl_conversions pcl_ros sensor_msgs octomap nav_msgs OpenMP Ceres glog)
+target_link_libraries(dll_node octomap ${OpenMP_LIBS} ceres glog)# Necessary to build 
+
 add_executable(grid3d_node src/grid3d_node.cpp)
 ament_target_dependencies(grid3d_node ament_cmake rclcpp tf2 geometry_msgs pcl_conversions pcl_ros sensor_msgs octomap nav_msgs OpenMP tf2_geometry_msgs)
 target_link_libraries(grid3d_node octomap ${OpenMP_LIBS})# Necessary to build 
-# install(TARGETS
-#   dll_node
-#   DESTINATION lib/${PROJECT_NAME}
-# )
+
+install(TARGETS
+  dll_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 install(TARGETS
   grid3d_node
   DESTINATION lib/${PROJECT_NAME}
@@ -68,6 +71,9 @@ endif()
 include_directories(
   ${rclcpp_INCLUDE_DIRS}
   ${CERES_INCLUDE_DIRS}
+  ${tf2_ros_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+  ${tf2_geometry_msgs_INCLUDE_DIRS}
 )
 
 ament_package()

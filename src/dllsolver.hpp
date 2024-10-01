@@ -41,7 +41,7 @@ class DLLCostFunction
 
         // Compute the residual
         TrilinearParams p;
-        double sa, ca, nx, ny, nz, dxa, dya;
+        double sa, ca, nx, ny, nz;
         double c0, c1, c2, c3, c4, c5, c6, c7;
         sa = sin(a);
         ca = cos(a);

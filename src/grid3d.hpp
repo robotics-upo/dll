@@ -212,6 +212,7 @@ public:
 		m_ndt.setMaximumIterations (50);   // Setting max number of registration iterations.
 	}
 	friend class Grid3dNode;
+	friend class DLLNode;
 
 	~Grid3d(void)
 	{

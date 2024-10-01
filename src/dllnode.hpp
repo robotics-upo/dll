@@ -20,21 +20,19 @@
 #include "dllsolver.hpp"
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2/transform_datatypes.h>
-#include <tf2_ros/buffer.h>
 #include <time.h>
-
+#include <chrono>
 using std::isnan;
 
 //Class definition
 class DLLNode : public rclcpp::Node
 {
 public:
-	DLLNode(std::string &node_name) : 
-	m_grid3d(node_name), m_solver(m_grid3d)
-	m_grid3d(node_name),
-	!Default contructor 
-	DLLNode(std::string &node_name) : Node(node_name),m_solver(m_grid3d)
-	{		
+	//!Default contructor 
+	DLLNode(const std::string &node_name) : rclcpp::Node(node_name)
+	{	
+		m_tfBr = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+		m_tfListener = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		// Read node parameters
 		this->declare_parameter("in_cloud","/pointcloud");
 		this->declare_parameter("base_frame_id","base_link");
@@ -54,7 +52,11 @@ public:
 		this->declare_parameter("align_method",1);
 		this->declare_parameter("solver_max_iter",75);
 		this->declare_parameter("solver_max_threads",8);
-
+		this->declare_parameter("map_path","map.ot");
+		this->declare_parameter("publish_point_cloud_rate",0.2);
+		
+		this->get_parameter("publish_point_cloud_rate",m_publishPointCloudRate);
+		this->get_parameter("map_path",m_mapPath);
 		this->get_parameter("in_cloud",m_inCloudTopic);
 		this->get_parameter("base_frame_id",m_baseFrameId);
 		this->get_parameter("odom_frame_id",m_odomFrameId);
@@ -76,7 +78,8 @@ public:
 		this->get_parameter("align_method",m_alignMethod);
 		this->get_parameter("solver_max_iter",m_solverMaxIter);
 		this->get_parameter("solver_max_threads",m_solverMaxThreads);
-
+		m_grid3d=std::make_unique<Grid3d>(m_mapPath);
+		m_solver=std::make_unique<DLLSolver>(*m_grid3d);
 		// Init internal variables
 		m_init = false;
 		m_doUpdate = false;
@@ -86,8 +89,8 @@ public:
 		//m_grid3d.computeTrilinearInterpolation(); /* Now we compute the approximation online */
 
 		// Setup solver parameters
-		m_solver.setMaxNumIterations(m_solverMaxIter);
-		m_solver.setMaxNumThreads(m_solverMaxThreads);
+		m_solver->setMaxNumIterations(m_solverMaxIter);
+		m_solver->setMaxNumThreads(m_solverMaxThreads);
 
 		// Launch subscribers
 		m_pcSub = this->create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -123,6 +126,14 @@ public:
 			setInitialPose(pose);
 			m_init = true;
 		}
+		if(m_publishPointCloudRate > 0)
+		{
+			m_pcPub = this->create_publisher<sensor_msgs::msg::PointCloud2>(node_name+"/map_point_cloud",10);
+			std::chrono::duration<double>periodPC(1/m_publishPointCloudRate);
+			timerpc_=this->create_wall_timer(periodPC,std::bind(&DLLNode::publishMapPointCloud,this));
+		}else {
+			RCLCPP_ERROR(this->get_logger(), "Invalid m_publishPointCloudRate value: %f",m_publishPointCloudRate);
+		}
 	}
 
 	//!Default destructor
@@ -148,16 +159,16 @@ public:
 		transformStamped.transform.rotation.y=m_lastGlobalTf.getRotation().y();
 		transformStamped.transform.rotation.z=m_lastGlobalTf.getRotation().z();
 		transformStamped.transform.rotation.w=m_lastGlobalTf.getRotation().w();
-		m_tfBr.sendTransform(transformStamped);
+		m_tfBr->sendTransform(transformStamped);
 		
 		// Compute odometric translation and rotation since last update 
 		auto t = this->now();
 		tf2::Transform odomTf;
 		try
 		{
-			odomTf=m_tfListener.lookupTransform(m_odomFrameId, m_baseFrameId, tf2::TimePointZero);
+			tf2::fromMsg(m_tfListener->lookupTransform(m_odomFrameId, m_baseFrameId, tf2::TimePointZero),odomTf);
 		}
-		catch (tf2::TransformException ex)
+		catch (tf2::TransformException& ex)
 		{
 			//ROS_ERROR("DLL error: %s",ex.what());
 			return false;
@@ -197,13 +208,20 @@ public:
 	}
 		                                   
 private:
+	void publishMapPointCloud()
+	{
+		RCLCPP_INFO(this->get_logger(),"Publishing Map PointCloud");
+		m_grid3d->m_pcMsg.header.stamp = rclcpp::Node::now();
+		m_grid3d->m_pcMsg.header.frame_id = m_baseFrameId;
+		m_pcPub->publish(m_grid3d->m_pcMsg);
+	}
 
 	void checkUpdateThresholdsTimer()
 	{
 		checkUpdateThresholds();
 	}
 
-	void initialPoseReceived(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr& msg)
+	void initialPoseReceived(const std::shared_ptr<const geometry_msgs::msg::PoseWithCovarianceStamped>& msg)
 	{
 		// We only accept initial pose estimates in the global frame
 		if(msg->header.frame_id != m_globalFrameId)
@@ -225,7 +243,7 @@ private:
 	}
 	
 	//! IMU callback
-	void imuCallback(const sensor_msgs::msg::Imu::SharedPtr& msg) 
+	void imuCallback(const std::shared_ptr<const sensor_msgs::msg::Imu>& msg) 
 	{
 		double r = m_roll_imu;
 		double p = m_pitch_imu;
@@ -244,7 +262,7 @@ private:
 	}
 
 	//! 3D point-cloud callback
-	void pointcloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr& cloud)
+	void pointcloudCallback(const std::shared_ptr<const sensor_msgs::msg::PointCloud2>& cloud)
 	{	
 		static double lastYaw_imu = -1000.0;
 		double deltaYaw_imu = 0;
@@ -262,10 +280,10 @@ private:
 		try
 		{
 
-			m_tfListener.canTransform(m_odomFrameId,m_baseFrameId,rclcpp::Time(0), rclcpp::chrono::Duration(1.0));//waitForTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0), std::chrono::seconds(1));
-			m_tfListener.lookupTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0), odomTf);
+			m_tfListener->canTransform(m_odomFrameId,m_baseFrameId,rclcpp::Time(0), std::chrono::duration<double>(1.0));//waitForTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0), std::chrono::seconds(1));
+			tf2::fromMsg(m_tfListener->lookupTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0)),odomTf);
 		}
-		catch (tf2::TransformException ex)
+		catch (tf2::TransformException& ex)
 		{
 			RCLCPP_ERROR(this->get_logger(),"%s",ex.what());
 			return;
@@ -278,11 +296,11 @@ private:
 		{	
 			try
 			{
-                m_tfListener.canTransform(m_baseFrameId,cloud->header.frame_id,rclcpp::Time(0), rclcpp::chrono::Duration(2.0));//waitForTransform(m_baseFrameId, cloud->header.frame_id, rclcpp::Time(0), std::chrono::Duration(2.0));
-                m_tfListener.lookupTransform(m_baseFrameId, cloud->header.frame_id, rclcpp::Time(0), m_pclTf);
+                m_tfListener->canTransform(m_baseFrameId,cloud->header.frame_id,rclcpp::Time(0), std::chrono::duration<double>(2.0));//waitForTransform(m_baseFrameId, cloud->header.frame_id, rclcpp::Time(0), std::chrono::Duration(2.0));
+                tf2::fromMsg(m_tfListener->lookupTransform(m_baseFrameId, cloud->header.frame_id, rclcpp::Time(0)), m_pclTf);
 				m_tfCache = true;
 			}
-			catch (tf2::TransformException ex)
+			catch (tf2::TransformException& ex)
 			{
 				RCLCPP_ERROR(this->get_logger(),"%s",ex.what());
 				return;
@@ -325,7 +343,7 @@ private:
 		
 		// Tilt-compensate point-cloud according to roll and pitch
 		std::vector<pcl::PointXYZ> points;
-		float cr, sr, cp, sp, cy, sy, rx, ry;
+		float cr, sr, cp, sp;
 		float r00, r01, r02, r10, r11, r12, r20, r21, r22;
 		sr = sin(roll);
 		cr = cos(roll);
@@ -335,7 +353,7 @@ private:
 		r10 =  0; 	r11 = cr;		r12 = -sr;
 		r20 = -sp;	r21 = cp*sr;	r22 = cp*cr;
 		points.resize(downCloud.size());
-		for(int i=0; i<downCloud.size(); i++) 
+		for(size_t i=0; i<downCloud.size(); i++) 
 		{
 			float x = downCloud[i].x, y = downCloud[i].y, z = downCloud[i].z;
 			points[i].x = x*r00 + y*r01 + z*r02;
@@ -348,11 +366,11 @@ private:
 		if(m_use_imu && m_useYawIncrements)
 			a = yaw+deltaYaw_imu;
 		if(m_alignMethod == 1) // DLL solver
-			m_solver.solve(points, tx, ty, tz, a);
+			m_solver->solve(points, tx, ty, tz, a);
 		else if(m_alignMethod == 2) // NDT solver
-			m_grid3d.alignNDT(points, tx, ty, tz, a);
+			m_grid3d->alignNDT(points, tx, ty, tz, a);
 		else if(m_alignMethod == 3) // ICP solver
-			m_grid3d.alignICP(points, tx, ty, tz, a);
+			m_grid3d->alignICP(points, tx, ty, tz, a);
 		yaw = a;
 		
 		// Update global TF
@@ -371,10 +389,10 @@ private:
 		// Extract TFs for future updates
 		try
 		{
-			m_tfListener.canTransform(m_odomFrameId,m_baseFrameId,rclcpp::Time(0), rclcpp::chrono::Duration(1.0));//.waitForTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0), rclcpp::chrono::Duration(1.0));
-			m_tfListener.lookupTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0), m_lastOdomTf);
+			m_tfListener->canTransform(m_odomFrameId,m_baseFrameId,rclcpp::Time(0), std::chrono::duration<double>(1.0));//.waitForTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0), rclcpp::chrono::Duration(1.0));
+			tf2::fromMsg(m_tfListener->lookupTransform(m_odomFrameId, m_baseFrameId, rclcpp::Time(0)),m_lastOdomTf);
 		}
-		catch (tf2::TransformException ex)
+		catch (tf2::TransformException& ex)
 		{
 			RCLCPP_ERROR(this->get_logger(),"%s",ex.what());
 			return;
@@ -423,7 +441,7 @@ private:
 		sensor_msgs::PointCloud2Iterator<float> iterY(in, "y");
 		sensor_msgs::PointCloud2Iterator<float> iterZ(in, "z");
 		out.clear();
-		for(int i=0; i<in.width*in.height; i++, ++iterX, ++iterY, ++iterZ) 
+		for(unsigned int i=0; i<in.width*in.height; i++, ++iterX, ++iterY, ++iterZ) 
 		{
 			pcl::PointXYZ p(*iterX, *iterY, *iterZ);
 			float d2 = p.x*p.x + p.y*p.y + p.z*p.z;
@@ -464,21 +482,25 @@ private:
 	std::string m_baseFrameId;
 	std::string m_odomFrameId;
 	std::string m_globalFrameId;
-	
+	std::string m_mapPath;
 	//! ROS msgs and data
-	tf2_ros::TransformBroadcaster m_tfBr;
-	tf2_ros::Buffer m_tfListener;
+	std::unique_ptr<tf2_ros::TransformBroadcaster> m_tfBr;
+	std::unique_ptr<tf2_ros::Buffer> m_tfListener;
 	geometry_msgs::msg::TransformStamped transformStamped;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr m_pcSub;
 	rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr m_initialPoseSub;
 	rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr m_imuSub;
 	rclcpp::TimerBase::SharedPtr updateTimer;
-	
+	double m_publishPointCloudRate;
+	rclcpp::TimerBase::SharedPtr timerpc_;
+	rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr m_pcPub;
 	//! 3D distance drid
    	//	Grid3d m_grid3d;
-		
+	std::unique_ptr <Grid3d> m_grid3d;
+
 	//! Non-linear optimization solver
-	DLLSolver m_solver;
+	std::unique_ptr <DLLSolver> m_solver;
+
 };
 
 #endif
