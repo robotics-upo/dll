@@ -24,6 +24,10 @@
 #include <chrono>
 using std::isnan;
 
+// Forward declare functions needed in this header
+namespace tf2 {
+	void fromMsg(const geometry_msgs::msg::TransformStamped & in, tf2::Transform & out);
+}
 //Class definition
 class DLLNode : public rclcpp::Node
 {
@@ -502,6 +506,17 @@ private:
 	std::unique_ptr <DLLSolver> m_solver;
 
 };
+namespace tf2{
+
+void fromMsg(const geometry_msgs::msg::TransformStamped & in, Transform & out)  {
+	out.setOrigin(Vector3(in.transform.translation.x,
+	              in.transform.translation.y,
+				  in.transform.translation.z));
+	Quaternion rot;
+	fromMsg(in.transform.rotation, rot);
+	out.setRotation(rot);
+}
+}
 
 #endif
 

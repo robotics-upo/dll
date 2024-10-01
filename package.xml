@@ -41,7 +41,7 @@
   <exec_depend>tf2</exec_depend>
   <exec_depend>Glog</exec_depend>
   <exec_depend>Ceres</exec_depend>
-  <build_depend>OpenMP</build_depend>
+  <exec_depend>OpenMP</exec_depend>
 
 
 

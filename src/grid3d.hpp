@@ -542,19 +542,20 @@ protected:
 		
 		// Write grid general info 
 		int version;
-		fread(&version, sizeof(int), 1, pf);
+		size_t bytes_read = 0;
+		bytes_read += fread(&version, sizeof(int), 1, pf);
 		if(version != 3)
 		{
 			std::cout << "Incorrect grid file encoding version. " << fileName << " has version " <<  version << ", version 3 required." << std::endl;
 			return false;
 		}
-		fread(&m_gridSize, sizeof(uint64_t), 1, pf);
-		fread(&m_gridSizeX, sizeof(uint64_t), 1, pf);
-		fread(&m_gridSizeY, sizeof(uint64_t), 1, pf);
-		fread(&m_gridSizeZ, sizeof(uint64_t), 1, pf);
-		fread(&m_offsetX, sizeof(float), 1, pf);
-		fread(&m_offsetY, sizeof(float), 1, pf);
-		fread(&m_offsetZ, sizeof(float), 1, pf);
+		bytes_read += fread(&m_gridSize, sizeof(uint64_t), 1, pf);
+		bytes_read += fread(&m_gridSizeX, sizeof(uint64_t), 1, pf);
+		bytes_read += fread(&m_gridSizeY, sizeof(uint64_t), 1, pf);
+		bytes_read += fread(&m_gridSizeZ, sizeof(uint64_t), 1, pf);
+		bytes_read += fread(&m_offsetX, sizeof(float), 1, pf);
+		bytes_read += fread(&m_offsetY, sizeof(float), 1, pf);
+		bytes_read += fread(&m_offsetZ, sizeof(float), 1, pf);
 		m_gridStepY = m_gridSizeX;
 		m_gridStepZ = m_gridSizeX*m_gridSizeY;
 		
@@ -562,10 +563,13 @@ protected:
 		if(m_grid != NULL)
 			delete []m_grid;
 		m_grid = new uint16_t[m_gridSize];
-		fread(m_grid, sizeof(uint16_t), m_gridSize, pf);
+		bytes_read += fread(m_grid, sizeof(uint16_t), m_gridSize, pf);
 		
 		// Close file
 		fclose(pf);
+
+		// Debug
+		std::cout << " Grid loaded. Total bytes: " << bytes_read << std::endl;
 		
 		return true;
 	}
