@@ -53,6 +53,7 @@ install(TARGETS
 )
 install(DIRECTORY
   launch
+  maps
   DESTINATION share/${PROJECT_NAME}/
 )
 
