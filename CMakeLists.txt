@@ -54,6 +54,7 @@ install(TARGETS
 install(DIRECTORY
   launch
   maps
+  bags
   DESTINATION share/${PROJECT_NAME}/
 )
 

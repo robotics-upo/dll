@@ -3,13 +3,13 @@
 <launch>
   
   # Use simulation time for TFs
-  <param name="use_sim_time" value="true" /> 
+  <!-- <param name="use_sim_time" value="true" />  -->
 
   # Bag file
-  <node name="bag_player" exec="play" pkg="ros2bag" args="catec2.bag -s 0 -r 1.0 --clock " />
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/catec2/catec2.db3 --start-offset 0 -r 1.0" />
 
  # Fake odometry. You better use a good odometry estrimator as LOAM
-  <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom base_link 10" />
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom base_link" />
 
   # Flight 1 map conf
   <arg name="base_frame_id" default="base_link"/>
@@ -18,29 +18,29 @@
   <arg name="initial_x" default="15.7"/>
   <arg name="initial_y" default="13.8"/>
   <arg name="initial_z" default="1.0"/>
-  <arg name="initial_a" default="0"/> 
+  <arg name="initial_a" default="0.0"/> 
   <arg name="map" default="catec.bt" />
-  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(arg map)"/>
+  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
 
   # Launch DLL
   <node name="dll_node" exec="dll_node" pkg="dll" output="screen">
     <remap from="/dll_node/initial_pose" to="/initialpose"/>
     <param name="in_cloud" value="/lidar_pointcloud" />
-    <param name="base_frame_id" value="$(arg base_frame_id)" />
-    <param name="odom_frame_id" value="$(arg odom_frame_id)" />
-    <param name="global_frame_id" value="$(arg global_frame_id)" />
+    <param name="base_frame_id" value="$(var base_frame_id)" />
+    <param name="odom_frame_id" value="$(var odom_frame_id)" />
+    <param name="global_frame_id" value="$(var global_frame_id)" />
 
     <param name="rate" value="10.0" />
-    <param name="map_path" value="$(arg map_path)" />
+    <param name="map_path" value="$(var map_path)" />
     <param name="sensor_dev" value="0.05" />   
     <param name="publish_point_cloud" value="true" />    
     <param name="update_min_d" value="0.01" />
     <param name="update_min_a" value="0.01" /> 
     <param name="update_min_time" value="0.1" />
-    <param name="initial_x"   value="$(arg initial_x)"/>
-    <param name="initial_y"   value="$(arg initial_y)"/>
-    <param name="initial_z"   value="$(arg initial_z)"/>
-    <param name="initial_a"   value="$(arg initial_a)"/>
+    <param name="initial_x"   value="$(var initial_x)"/>
+    <param name="initial_y"   value="$(var initial_y)"/>
+    <param name="initial_z"   value="$(var initial_z)"/>
+    <param name="initial_a"   value="$(var initial_a)"/>
     <param name="use_imu" value="false" />  # Watch this!!! No IMU into the bag file, must be computed from ground truth
     <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
    

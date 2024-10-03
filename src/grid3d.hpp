@@ -254,6 +254,9 @@ public:
 
 			// Get neightbour values to compute trilinear interpolation
 			float c000, c001, c010, c011, c100, c101, c110, c111;
+			if(i+1+m_gridStepY+m_gridStepZ>=m_gridSize){
+				return r;
+			}
 			c000 = m_grid[i]*0.01; 
 			c001 = m_grid[i+m_gridStepZ]*0.01; 
 			c010 = m_grid[i+m_gridStepY]*0.01; 
