@@ -135,6 +135,7 @@ public:
 		{
 			m_pcPub = this->create_publisher<sensor_msgs::msg::PointCloud2>(node_name+"/map_point_cloud",10);
 			std::chrono::duration<double>periodPC(1/m_publishPointCloudRate);
+			publishMapPointCloud();
 			timerpc_=this->create_wall_timer(periodPC,std::bind(&DLLNode::publishMapPointCloud,this));
 		}else {
 			RCLCPP_ERROR(this->get_logger(), "Invalid m_publishPointCloudRate value: %f",m_publishPointCloudRate);
