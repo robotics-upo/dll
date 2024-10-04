@@ -46,11 +46,23 @@ Once launched, DLL will publish a TF between map and odom that alligns the senso
 When a new map is provided, DLL will compute the Distance Field grid. This file will be automatically generated on startup if it does not exist. Once generated, it is stored in the same path of the .bt map, so that it is not needed to be computed in future executions.
 
 ## Running the examples.
-As example, you can download 5 datasets from the Service Robotics Laboratory repository (https://robotics.upo.es/datasets/dll/dataset_dll_ros2.zip). The example launch files are prepared and configured to work with these bags. You can see the different parameters of the method. Notice that, except for mbzirc.bag, these bags do not include odometry estimation. For this reason, as an easy work around, the lauch files publish a fake odometry that is the identity matrix. DLL is faster and more accurate when a good odometry is available.
+As example, you can download 5 datasets from the Service Robotics Laboratory repository. The example launch files are prepared and configured to work with these bags. You can see the different parameters of the method. Notice that, except for mbzirc.bag, these bags do not include odometry estimation. For this reason, as an easy work around, the lauch files publish a fake odometry that is the identity matrix. DLL is faster and more accurate when a good odometry is available.
 
 For the examples to work correctly you have to follow the following steps:
-- Create a bags folder inside the dll project.
-- Download the bag files from the  Service Robotics Laboratory repository() and extract them inside the bags folder.
+- Create a bags folder inside the dll source directory.
+- Download the bag files from the  Service Robotics Laboratory repository (https://robotics.upo.es/datasets/dll/dataset_dll_ros2.zip) 
+- Extract the file into the bags folder.
+
+Please, follow the next steps for downloading the dataset and executing the catec1 example on the ros2_ws folder:
+```
+$ cd ~/ros2_ws/src/dll
+$ mkdir bags
+$ cd bags
+$ wget https://robotics.upo.es/datasets/dll/dataset_dll_ros2.zip
+$ unzip dataset_dll_ros2.zip
+$ ros2 launch dll catec1_launch.xml
+```
+Please note that for further examples you have to just execute the last command with the desired launch file.
 
 ## Cite
 DLL has been published in IROS 2021.
