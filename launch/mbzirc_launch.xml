@@ -15,7 +15,7 @@
   <arg name="global_frame_id" default="world"/>
   <arg name="initial_x" default="16.964"/>
   <arg name="initial_y" default="61.508"/>
-  <arg name="initial_z" default="1.0"/>
+  <arg name="initial_z" default="0.0"/>
   <arg name="initial_a" default="-0.063"/> 
   <arg name="map" default="mbzirc.bt" />
   <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
@@ -30,9 +30,7 @@
     <param name="global_frame_id" value="$(var global_frame_id)" />
 
     <param name="rate" value="10.0" />
-    <param name="map_path" value="$(var map_path)" />
-    <param name="sensor_dev" value="0.05" />   
-    <param name="publish_point_cloud" value="true" />    
+    <param name="map_path" value="$(var map_path)" />  
     <param name="update_min_d" value="0.01" />
     <param name="update_min_a" value="0.01" /> 
     <param name="update_min_time" value="0.1" />

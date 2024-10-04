@@ -31,9 +31,7 @@
     <param name="global_frame_id" value="$(var global_frame_id)" />
 
     <param name="rate" value="10.0" />
-    <param name="map_path" value="$(var map_path)" />
-    <param name="sensor_dev" value="0.05" />   
-    <param name="publish_point_cloud" value="true" />    
+    <param name="map_path" value="$(var map_path)" /> 
     <param name="update_min_d" value="0.01" />
     <param name="update_min_a" value="0.01" /> 
     <param name="update_min_time" value="0.1" />

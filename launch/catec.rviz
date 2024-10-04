@@ -53,8 +53,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 6.378717422485352
-        Min Value: -0.011376619338989258
+        Max Value: 5.925000190734863
+        Min Value: 0.02500000037252903
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -80,7 +80,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /lidar_pointcloud
+        Value: /dll_node/map_point_cloud
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -106,7 +106,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.10000000149011612
+      Size (m): 0.05000000074505806
       Style: Flat Squares
       Topic:
         Depth: 5
@@ -175,10 +175,9 @@ Visualization Manager:
       Show Names: false
       Tree:
         map:
-          {}
-        odom:
-          base_link:
-            {}
+          odom:
+            base_link:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -262,25 +261,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 32.955360412597656
+      Distance: 15.08421802520752
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.570200443267822
-        Y: 12.345292091369629
-        Z: 19.13018226623535
+        X: 10.17654037475586
+        Y: 18.76891326904297
+        Z: 17.601016998291016
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 1.1547967195510864
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.2633895874023438
+      Yaw: 2.288388252258301
     Saved: ~
 Window Geometry:
   Displays:
