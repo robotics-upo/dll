@@ -92,19 +92,19 @@ public:
 		
 		// Compute trilinear interpolation map 
 		//m_grid3d.computeTrilinearInterpolation(); /* Now we compute the approximation online */
-
+		RCLCPP_INFO(this->get_logger(), "Initializing dll: \n Odom_frame_id: %s base_frame_id: %s global_frame_id: %s",m_odomFrameId.c_str(),m_baseFrameId.c_str(),m_globalFrameId.c_str());
 		// Setup solver parameters
 		m_solver->setMaxNumIterations(m_solverMaxIter);
 		m_solver->setMaxNumThreads(m_solverMaxThreads);
 
 		// Launch subscribers
 		m_pcSub = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            m_inCloudTopic, 1, std::bind(&DLLNode::pointcloudCallback, this, std::placeholders::_1));
+            m_inCloudTopic, rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::BestEffort), std::bind(&DLLNode::pointcloudCallback, this, std::placeholders::_1));
         m_initialPoseSub = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-            "initial_pose", 2, std::bind(&DLLNode::initialPoseReceived, this, std::placeholders::_1));
+            "initial_pose", rclcpp::QoS(2).reliability(rclcpp::ReliabilityPolicy::BestEffort), std::bind(&DLLNode::initialPoseReceived, this, std::placeholders::_1));
         if (m_use_imu) {
             m_imuSub = this->create_subscription<sensor_msgs::msg::Imu>(
-                "imu", 1, std::bind(&DLLNode::imuCallback, this, std::placeholders::_1));
+                "imu",rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::BestEffort), std::bind(&DLLNode::imuCallback, this, std::placeholders::_1));
         }
 
 		// Time stamp for periodic update
@@ -128,7 +128,10 @@ public:
 			pose.setOrigin(origin);
 			pose.setRotation(q);
 			
-			setInitialPose(pose);
+			while(!setInitialPose(pose)){
+				RCLCPP_INFO(this->get_logger(), "Trying to set Initial Pose: ");
+				sleep(1);
+			}
 			m_init = true;	
 		}
 		if(m_publishPointCloudRate > 0)
@@ -396,7 +399,7 @@ private:
 	}
 	
 	//! Set the initial pose of the particle filter
-	void setInitialPose(tf2::Transform initPose)
+	bool setInitialPose(tf2::Transform initPose)
 	{
 		// Extract TFs for future updates
 		try
@@ -407,7 +410,7 @@ private:
 		catch (tf2::TransformException& ex)
 		{
 			RCLCPP_ERROR(this->get_logger(),"%s",ex.what());
-			return;
+			return false;
 		}
 
 		// Get estimated orientation from IMU if available
@@ -435,6 +438,7 @@ private:
 		// Prepare next iterations		
 		m_doUpdate = false;
 		m_init = true;
+		return true;
 	}
 	
 	//! Return yaw from a given TF
