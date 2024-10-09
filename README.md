@@ -3,12 +3,12 @@
 ## Summary
 This package presents DLL, a direct map-based localization technique using 3D LIDAR for its application to aerial robots. DLL implements a point cloud to map registration based on non-linear optimization of the distance of the points and the map, thus not requiring  features, neither point correspondences. Given an initial pose, the method is able to track the pose of the robot by refining the predicted pose from odometry. The method performs much better than Monte-Carlo localization methods and achieves comparable precision to other optimization-based approaches but running one order of magnitude faster. The method is also robust under odometric errors. 
 
-DLL is fully integarted in Robot Operating System (ROS). It follows the general localization apparoch of ROS, DLL makes use of sensor data to compute the transform that better fits the robot odometry TF into the map. Although an odometry system is recommended for fast and accurate localization, DLL also performs well without odometry information if the robot moves smoothly. 
+DLL is fully integarted in Robot Operating System 2 (ROS2). It follows the general localization approach of ROS2, DLL makes use of sensor data to compute the transform that better fits the robot odometry TF into the map. Although an odometry system is recommended for fast and accurate localization, DLL also performs well without odometry information if the robot moves smoothly. 
 
 ![DLL experimental results in different setups](dll_video.gif)
 
 ## Software dependencies
-There are not hard dependencies except for Google Ceres Solver and ROS:
+There are not hard dependencies except for Google Ceres Solver and ROS2:
  - ceres: Follow the installation instructions for Google Ceres at http://ceres-solver.org/installation.html
  - ROS2: The package has been tested in ROS2 Humble under Ubuntu 22.04. Follow installation instruction from ROS at https://docs.ros.org/en/humble/Installation.html
   - Glog, OpenMP, Octomap, PCL, PCL_ROS: Use the following command: 
@@ -43,10 +43,10 @@ You can find several examples into the launch directory. The module needs the fo
 
 Once launched, DLL will publish a TF between map and odom that alligns the sensor point cloud to the map. 
 
-When a new map is provided, DLL will compute the Distance Field grid. This file will be automatically generated on startup if it does not exist. Once generated, it is stored in the same path of the .bt map, so that it is not needed to be computed in future executions.
+Whenever a new map is provided, DLL will compute the Distance Field grid. This file will be automatically generated on startup if it does not exist. Once generated, it is stored in the same path of the .bt map, so that it is not needed to be computed in future executions.
 
 ## Running the examples.
-As example, you can download 5 datasets from the Service Robotics Laboratory repository. The example launch files are prepared and configured to work with these bags. You can see the different parameters of the method. Notice that, except for mbzirc.bag, these bags do not include odometry estimation. For this reason, as an easy work around, the lauch files publish a fake odometry that is the identity matrix. DLL is faster and more accurate when a good odometry is available.
+As example, you can download 5 datasets from the Service Robotics Laboratory repository. The example launch files are prepared and configured to work with these bags. You can see the different parameters of the method. Notice that, except for mbzirc.bag, these bags do not include odometry estimation. For this reason, as an easy workaround, the launch files publish a fake odometry that is the identity matrix. DLL is faster and more accurate when a good odometry is available.
 
 For the examples to work correctly you have to follow the following steps:
 - Create a bags folder inside the dll source directory.
