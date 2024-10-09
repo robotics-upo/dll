@@ -45,6 +45,6 @@
     
   </node>
 
-  <node name="rviz" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/airsim.rviz" output="screen"/>
+  <node name="rviz" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/catec.rviz" output="screen"/>
 
 </launch>	
