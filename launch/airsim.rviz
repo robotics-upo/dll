@@ -53,7 +53,7 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10.524999618530273
+        Max Value: 5.925000190734863
         Min Value: 0.02500000037252903
         Value: true
       Axis: Z
@@ -89,7 +89,7 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        drone_1:
+        base_link:
           Value: true
         map:
           Value: true
@@ -103,7 +103,7 @@ Visualization Manager:
       Tree:
         map:
           odom:
-            drone_1:
+            base_link:
               {}
       Update Interval: 0
       Value: true
@@ -187,25 +187,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 38.17584228515625
+      Distance: 40.93631362915039
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.13693618774414
-        Y: 17.068117141723633
-        Z: 2.5139689445495605
+        X: 12.860280990600586
+        Y: 16.105241775512695
+        Z: 2.509247303009033
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -1.519796371459961
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.244202613830566
+      Yaw: 6.254205226898193
     Saved: ~
 Window Geometry:
   Displays:
