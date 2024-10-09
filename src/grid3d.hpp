@@ -620,11 +620,12 @@ protected:
 		m_gridStepY = m_gridSizeX;
 		m_gridStepZ = m_gridSizeX*m_gridSizeY;
 		m_grid = new uint16_t[m_gridSize];
-
+		std::cout <<"PointCloud Size: XSize = "<<m_gridSizeX<<"\n YSize = "<<m_gridSizeY <<" \n ZSize =" <<m_gridSizeZ<<std::endl;
 		// Setup kdtree
 		m_kdtree.setInputCloud(m_cloud);
 
 		// Compute the distance to the closest point of the grid
+		
 		#pragma omp parallel for num_threads(16) shared(m_grid) 
 		for(unsigned int iz=0; iz<m_gridSizeZ; iz++)
 		{
@@ -632,7 +633,7 @@ protected:
 			pcl::PointXYZ searchPoint;
 			std::vector<int> pointIdxNKNSearch(1);
 			std::vector<float> pointNKNSquaredDistance(1);
-			printf("Processing z=%i out of %lu\n", iz, m_gridSizeZ);
+			std::cout<<"Processing z="<<iz<<" out of "<< m_gridSizeZ<<std::endl;
 			for(unsigned int iy=0; iy<m_gridSizeY; iy++)
 			{
 				for(unsigned int ix=0; ix<m_gridSizeX; ix++)
