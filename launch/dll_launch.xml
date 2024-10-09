@@ -1,16 +1,15 @@
 <!--
 -->
 <launch>
-  # Bag filename
- <arg name="bag_file" /> 
+  # Bag filename 
 
   <arg name="base_frame_id" default="base_link"/>
   <arg name="odom_frame_id" default="odom"/>
   <arg name="global_frame_id" default="map"/>
- 
+  <arg name="use_rviz" default="false"/>
   <arg name="initial_x" default="6.7"/>
-  <arg name="initial_y" default="14"/>
-  <arg name="initial_z" default="0"/>
+  <arg name="initial_y" default="14.0"/>
+  <arg name="initial_z" default="0.0"/>
   <arg name="initial_a" default="0.18"/> 
   <arg name="map" default="catec.bt" />
   <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
@@ -22,7 +21,7 @@
     <param name="base_frame_id" value="$(var base_frame_id)" />
     <param name="odom_frame_id" value="$(var odom_frame_id)" />
     <param name="global_frame_id" value="$(var global_frame_id)" />
-
+    
     <param name="update_rate" value="10.0" />
     <param name="map_path" value="$(var map_path)" />    
     <param name="update_min_d" value="0.1" />
@@ -35,5 +34,5 @@
     
   </node>
 
-  <node name="rviz" exec="rviz2" pkg="rviz2" output="screen"/>
+  <node if="$(var use_rviz)" name="rviz" exec="rviz2" pkg="rviz2"/> 
 </launch>	
