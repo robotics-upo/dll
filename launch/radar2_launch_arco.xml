@@ -1,0 +1,46 @@
+<launch>
+
+  # Bag file
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment3_drone_falls/rosbag2_2024_07_18-11_35_42_0.db3 --start-offset 0 -r 1.0 --clock " />
+
+  # Fake odometry. You HAVE to use a good odometry estrimator as LOAM
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_Drone_tf" args="0 0 0 0 0 0 arco/odom arco/base_link" />
+  
+  # Arco conf
+  <arg name="arco_base_frame_id" default="arco/base_link"/>
+  <arg name="arco_odom_frame_id" default="arco/odom"/>
+  <arg name="arco_initial_x" default="13.0"/>  
+  <arg name="arco_initial_y" default="27.0"/> 
+  <arg name="arco_initial_z" default="0.5"/> 
+  <arg name="arco_initial_a" default="0.0"/>  
+  # Map conf
+  <arg name="global_frame_id" default="map"/>
+  <arg name="map" default="hall45_drone_cutted.bt"/>
+  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
+
+  # Launch DLL Arco
+   <node name="dll_node_Arco" exec="dll_node" pkg="dll" output="screen">
+    <remap from="/dll_node/initial_pose" to="/initialpose"/>
+    <remap from="/imu" to="/arco/idmind_imu/imu"/>
+    <param name="in_cloud" value="/arco/ouster/points" />
+    <param name="base_frame_id" value="$(var arco_base_frame_id)" />
+    <param name="odom_frame_id" value="$(var arco_odom_frame_id)" />
+    <param name="global_frame_id" value="$(var global_frame_id)" />
+
+    <param name="rate" value="10.0" />
+    <param name="map_path" value="$(var map_path)" />
+    <param name="sensor_dev" value="0.05" />   
+    <param name="publish_point_cloud" value="true" />    
+    <param name="update_min_d" value="0.01" />
+    <param name="update_min_a" value="0.01" /> 
+    <param name="update_min_time" value="0.1" />
+    <param name="initial_x"   value="$(var arco_initial_x)"/>
+    <param name="initial_y"   value="$(var arco_initial_y)"/>
+    <param name="initial_z"   value="$(var arco_initial_z)"/>
+    <param name="initial_a"   value="$(var arco_initial_a)"/>
+    <param name="use_imu" value="true" />
+    <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
+  </node>
+  <node name="rviz2" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/radar_arco.rviz"/>
+
+</launch>	

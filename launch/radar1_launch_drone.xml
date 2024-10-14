@@ -1,0 +1,51 @@
+<launch>
+
+  # Bag file
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone/rosbag2_2024_07_18-11_11_53_0.db3 --start-offset 0 -r 1.0 --clock --remap /tf:=/tf_drone" />
+
+  # Fake odometry. You HAVE to use a good odometry estrimator as LOAM
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_Drone_tf" args="0 0 0 0 0 0 odom base_link">
+    <remap from="/tf" to="/tf_drone"/>
+    <remap from="/tf_static" to="/tf_droneS"/>
+  </node>
+  
+  # Drone conf
+  <arg name="drone_base_frame_id" default="base_link"/>
+  <arg name="drone_odom_frame_id" default="odom"/>
+  <arg name="drone_initial_x" default="14.0"/>  
+  <arg name="drone_initial_y" default="23.0"/> 
+  <arg name="drone_initial_z" default="0.5"/> 
+  <arg name="drone_initial_a" default="0.0"/>
+
+  # Map conf
+  <arg name="global_frame_id" default="map"/>
+  <arg name="map" default="hall45_drone_cutted.bt"/>
+  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
+
+  # Launch DLL drone
+  <node name="dll_node_Drone" exec="dll_node" pkg="dll" output="screen">
+    <remap from="/dll_node/initial_pose" to="/initialpose"/>
+    <remap from="/imu" to="/dji_sdk/imu"/>
+    <param name="in_cloud" value="/os1_cloud_node/points_non_dense" />
+    <param name="base_frame_id" value="$(var drone_base_frame_id)" />
+    <param name="odom_frame_id" value="$(var drone_odom_frame_id)" />
+    <param name="global_frame_id" value="$(var global_frame_id)" />
+
+    <param name="rate" value="10.0" />
+    <param name="map_path" value="$(var map_path)" />
+    <param name="sensor_dev" value="0.05" />   
+    <param name="publish_point_cloud" value="true" />    
+    <param name="update_min_d" value="0.01" />
+    <param name="update_min_a" value="0.01" /> 
+    <param name="update_min_time" value="0.1" />
+    <param name="initial_x"   value="$(var drone_initial_x)"/>
+    <param name="initial_y"   value="$(var drone_initial_y)"/>
+    <param name="initial_z"   value="$(var drone_initial_z)"/>
+    <param name="initial_a"   value="$(var drone_initial_a)"/>
+    <param name="use_imu" value="true" />
+    <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
+  </node>
+
+  <node name="rviz2" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/radar_drone.rviz"/>
+
+</launch>	
