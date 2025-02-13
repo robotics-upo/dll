@@ -70,3 +70,9 @@ DLL has been published in IROS 2021.
 F. Caballero and L. Merino, "DLL: Direct LIDAR Localization. A map-based localization approach for aerial robots," 2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), Prague, Czech Republic, 2021, pp. 5491-5498, doi: 10.1109/IROS51168.2021.9636501. 
 
 You can download preliminar version of the the paper from [arXiv](https://arxiv.org/abs/2103.06112) 
+
+## Acknowledgement
+
+This work is partially supported by the Programa Operativo FEDER Andalucia 2014–2020 through the project DeepBot (PY20 00817)
+
+![Logos](logos.png)
