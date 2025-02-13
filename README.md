@@ -49,5 +49,9 @@ F. Caballero and L. Merino, "DLL: Direct LIDAR Localization. A map-based localiz
 
 You can download preliminar version of the the paper from [arXiv](https://arxiv.org/abs/2103.06112) 
 
+## Acknowledgement
 
+This work is partially supported by the Programa Operativo FEDER Andalucia 2014–2020 through the project DeepBot (PY20 00817)
+
+![Logos](logos.png)
 
