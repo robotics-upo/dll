@@ -22,6 +22,7 @@
 #include <tf2/transform_datatypes.h>
 #include <time.h>
 #include <chrono>
+#include <thread>
 using std::isnan;
 
 // Forward declare functions needed in this header
@@ -160,6 +161,7 @@ public:
 					
 		// Publish current TF from odom to map
 		transformStamped.header.stamp=last_cloud_time;
+		// transformStamped.header.stamp=this->get_clock()->now();
 		transformStamped.header.frame_id=m_globalFrameId;
 		transformStamped.child_frame_id=m_odomFrameId;
 		transformStamped.transform.translation.x=m_lastGlobalTf.getOrigin().x();
@@ -220,6 +222,29 @@ public:
 		
 		return false;
 	}
+
+	void callSolver(std::vector<pcl::PointXYZ> p, double tx, double ty, double tz, double roll, double pitch, double yaw, tf2::Stamped<tf2::Transform> odomTf) {
+		m_thread = true;
+		if(m_alignMethod == 1) { // DLL solver 
+			m_solver->solve(p, tx, ty, tz, yaw);
+		}
+		else if(m_alignMethod == 2) // NDT solver
+			m_grid3d->alignNDT(p, tx, ty, tz, yaw);
+		else if(m_alignMethod == 3) // ICP solver
+			m_grid3d->alignICP(p, tx, ty, tz, yaw);
+		m_thread = false;
+		RCLCPP_INFO(this->get_logger(),"Solved!");
+
+		// Update global TF
+		tf2::Quaternion q;
+		q.setRPY(roll, pitch, yaw);
+		m_lastGlobalTf = tf2::Transform(q, tf2::Vector3(tx, ty, tz))*odomTf.inverse();
+
+		// Update time and transform information
+		m_lastOdomTf = odomTf;
+		m_doUpdate = false;
+		RCLCPP_INFO(this->get_logger(),"TF actualizado");
+	}
 		                                   
 private:
 	void publishMapPointCloud()
@@ -232,7 +257,8 @@ private:
 
 	void checkUpdateThresholdsTimer()
 	{
-		checkUpdateThresholds();
+		
+			checkUpdateThresholds();
 	}
 
 	void initialPoseReceived(const std::shared_ptr<const geometry_msgs::msg::PoseWithCovarianceStamped>& msg)
@@ -280,7 +306,8 @@ private:
 	{	
 		static double lastYaw_imu = -1000.0;
 		double deltaYaw_imu = 0;
-		last_cloud_time=cloud->header.stamp;
+		last_cloud_time = cloud->header.stamp;
+		last_cloud_time += rclcpp::Duration(std::chrono::nanoseconds(100000000));
 		// If the filter is not initialized then exit
 		if(!m_init)
 			return;
@@ -378,24 +405,19 @@ private:
 		// Launch DLL solver
 		double a = yaw;
 		if(m_use_imu && m_useYawIncrements)
-			a = yaw+deltaYaw_imu;
-		if(m_alignMethod == 1) // DLL solver
-			m_solver->solve(points, tx, ty, tz, a);
-		else if(m_alignMethod == 2) // NDT solver
-			m_grid3d->alignNDT(points, tx, ty, tz, a);
-		else if(m_alignMethod == 3) // ICP solver
-			m_grid3d->alignICP(points, tx, ty, tz, a);
-		yaw = a;
-		
-		// Update global TF
-		tf2::Quaternion q;
-		q.setRPY(roll, pitch, yaw);
-		m_lastGlobalTf = tf2::Transform(q, tf2::Vector3(tx, ty, tz))*odomTf.inverse();
+			a = yaw + deltaYaw_imu;
 
-		// Update time and transform information
-		m_lastOdomTf = odomTf;
-		m_doUpdate = false;
-		RCLCPP_INFO(this->get_logger(),"TF actualizado");
+		if (!m_thread) {
+			RCLCPP_INFO(this->get_logger(),"Solving");
+
+
+			
+			std::thread t(std::bind(&DLLNode::callSolver,this,points,tx,ty,tz, roll, pitch, a, odomTf));
+			t.detach();
+			
+			
+		}
+		
 	}
 	
 	//! Set the initial pose of the particle filter
@@ -517,6 +539,9 @@ private:
 
 	//! Non-linear optimization solver
 	std::unique_ptr <DLLSolver> m_solver;
+
+	bool m_thread = false;
+	
 
 };
 namespace tf2{
