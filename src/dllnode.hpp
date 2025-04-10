@@ -223,7 +223,7 @@ public:
 		return false;
 	}
 
-	void callSolver(std::vector<pcl::PointXYZ> p, double tx, double ty, double tz, double roll, double pitch, double yaw, tf2::Stamped<tf2::Transform> odomTf) {
+	void callSolver(std::vector<pcl::PointXYZ> &p, double tx, double ty, double tz, double roll, double pitch, double yaw, tf2::Stamped<tf2::Transform> odomTf) {
 		m_thread = true;
 		if(m_alignMethod == 1) { // DLL solver 
 			m_solver->solve(p, tx, ty, tz, yaw);
@@ -307,7 +307,7 @@ private:
 		static double lastYaw_imu = -1000.0;
 		double deltaYaw_imu = 0;
 		last_cloud_time = cloud->header.stamp;
-		last_cloud_time += rclcpp::Duration(std::chrono::nanoseconds(100000000));
+		last_cloud_time += rclcpp::Duration(std::chrono::microseconds(100000));
 		// If the filter is not initialized then exit
 		if(!m_init)
 			return;
@@ -315,6 +315,10 @@ private:
 		// Check if an update must be performed or not
 		if(!m_doUpdate)
 			return;
+
+		if (m_thread) {
+			return;
+		}
 
 		// Compute odometric translation and rotation since last update 
 		tf2::Stamped<tf2::Transform> odomTf;
@@ -383,7 +387,7 @@ private:
 			mapTf.getBasis().getRPY(roll, pitch, yaw);
 		
 		// Tilt-compensate point-cloud according to roll and pitch
-		std::vector<pcl::PointXYZ> points;
+		static std::vector<pcl::PointXYZ> points;
 		float cr, sr, cp, sp;
 		float r00, r01, r02, r10, r11, r12, r20, r21, r22;
 		sr = sin(roll);
