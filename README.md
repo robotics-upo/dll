@@ -55,9 +55,7 @@ For the examples to work correctly you have to follow the following steps:
 
 Please, follow the next steps for downloading the dataset and executing the catec1 example on the ros2_ws folder:
 ```
-$ cd ~/ros2_ws/src/dll
-$ mkdir bags
-$ cd bags
+$ cd ~/ros2_ws/src/dll/bags
 $ wget https://robotics.upo.es/datasets/dll/dataset_dll_ros2.zip
 $ unzip dataset_dll_ros2.zip
 $ ros2 launch dll catec1_launch.xml
