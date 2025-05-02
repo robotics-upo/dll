@@ -1,0 +1,51 @@
+<!--
+-->
+<launch>
+  # Bag filename 
+
+  <arg name="base_frame_id" default="base_link"/>
+  <arg name="odom_frame_id" default="odom"/>
+  <arg name="global_frame_id" default="map"/>
+  <arg name="use_rviz" default="false"/>
+  <arg name="initial_x" default="6.7"/>
+  <arg name="initial_y" default="14.0"/>
+  <arg name="initial_z" default="0.0"/>
+  <arg name="initial_a" default="0.18"/> 
+  <arg name="map" default="hall45_drone_cutted.bt" />
+  <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
+  <arg name="topic" default="/os1_cloud_node/points_non_dense"/>
+
+  # Launch DLL drone
+  <include file="$(find-pkg-share dll)/launch/dll_launch.xml">
+    <arg name="map_path" value="$(var map_path)"/>
+    <arg name="initial_x" value="17.1"/>
+    <arg name="initial_y" value="23.45"/>
+    <arg name="initial_a" value="0.05"/>
+    <arg name="update_rate" value="50.0"/>
+  </include> 
+
+  # Launch DLL Arco
+  <node name="dll_node_arco" exec="dll_node" pkg="dll" output="screen">
+  
+    <param name="in_cloud" value="arco/ouster/points" />
+    <param name="base_frame_id" value="arco/base_link" />
+    <param name="odom_frame_id" value="arco/odom" />
+    <param name="global_frame_id" value="map" />
+    
+    <param name="update_rate" value="10.0" />
+    <param name="map_path" value="$(var map_path)" />    
+    <param name="update_min_d" value="0.1" />
+    <param name="update_min_a" value="0.1" />
+    <param name="update_min_time" value="0.1" />
+    <param name="initial_x"   value="14.0"/>
+    <param name="initial_y"   value="25.0"/>
+    <param name="initial_z"   value="0.0"/>
+    <param name="initial_a"   value="3.14"/>
+    <param name="use_imu" value="true"/>
+    
+    <remap from="imu" to="/arco/idmind_imu/imu"/> 
+    
+  </node>
+
+  <node if="$(var use_rviz)" name="rviz" exec="rviz2" pkg="rviz2"/> 
+</launch>	

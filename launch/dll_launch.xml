@@ -17,7 +17,7 @@
 
   # Launch DLL
   <node name="dll_node" exec="dll_node" pkg="dll" output="screen">
-    <remap from="/dll_node/initial_pose" to="/initialpose"/>
+    
     <param name="in_cloud" value="$(var topic)" />
     <param name="base_frame_id" value="$(var base_frame_id)" />
     <param name="odom_frame_id" value="$(var odom_frame_id)" />
@@ -27,6 +27,7 @@
     <param name="map_path" value="$(var map_path)" />    
     <param name="update_min_d" value="0.1" />
     <param name="update_min_a" value="0.1" />
+    <param name="update_min_time" value="0.1" />
     <param name="initial_x"   value="$(var initial_x)"/>
     <param name="initial_y"   value="$(var initial_y)"/>
     <param name="initial_z"   value="$(var initial_z)"/>
@@ -36,4 +37,6 @@
   </node>
 
   <node if="$(var use_rviz)" name="rviz" exec="rviz2" pkg="rviz2"/> 
+  <node name="viz" pkg="rviz2" exec="rviz2"/>
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --start-offset 0 -r 1.0 " />
 </launch>	

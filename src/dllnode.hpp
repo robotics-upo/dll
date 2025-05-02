@@ -137,13 +137,15 @@ public:
 		}
 		if(m_publishPointCloudRate > 0)
 		{
-			m_pcPub = this->create_publisher<sensor_msgs::msg::PointCloud2>(node_name+"/map_point_cloud",10);
+			m_pcPub = this->create_publisher<sensor_msgs::msg::PointCloud2>("~/map_point_cloud",10);
 			std::chrono::duration<double>periodPC(1/m_publishPointCloudRate);
 			publishMapPointCloud();
 			timerpc_=this->create_wall_timer(periodPC,std::bind(&DLLNode::publishMapPointCloud,this));
 		}else {
 			RCLCPP_ERROR(this->get_logger(), "Invalid m_publishPointCloudRate value: %f",m_publishPointCloudRate);
 		}
+		// For getting pose estimations
+		m_posePub = this->create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_estimation",10);
 	}
 
 	//!Default destructor
@@ -244,6 +246,20 @@ public:
 		m_lastOdomTf = odomTf;
 		m_doUpdate = false;
 		RCLCPP_INFO(this->get_logger(),"TF actualizado");
+
+		// Publish 3D posestamped
+		geometry_msgs::msg::PoseStamped pose_msg;
+		pose_msg.header.frame_id = m_globalFrameId;
+		pose_msg.header.stamp = last_cloud_time;
+		pose_msg.pose.position.x = tx;
+		pose_msg.pose.position.y = ty;
+		pose_msg.pose.position.z = tz;
+		pose_msg.pose.orientation.w = q.getW();
+		pose_msg.pose.orientation.x = q.getX();
+		pose_msg.pose.orientation.y = q.getY();
+		pose_msg.pose.orientation.z = q.getZ();
+
+		m_posePub->publish(pose_msg);
 	}
 		                                   
 private:
@@ -537,6 +553,7 @@ private:
 	double m_publishPointCloudRate;
 	rclcpp::TimerBase::SharedPtr timerpc_;
 	rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr m_pcPub;
+	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr m_posePub;
 	//! 3D distance drid
    	//	Grid3d m_grid3d;
 	std::unique_ptr <Grid3d> m_grid3d;
