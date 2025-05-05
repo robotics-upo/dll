@@ -38,5 +38,5 @@
 
   <node if="$(var use_rviz)" name="rviz" exec="rviz2" pkg="rviz2"/> 
   <node name="viz" pkg="rviz2" exec="rviz2"/>
-  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --start-offset 0 -r 1.0 " />
+  
 </launch>	

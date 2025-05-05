@@ -15,6 +15,8 @@
   <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
   <arg name="topic" default="/os1_cloud_node/points_non_dense"/>
 
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --clock --start-offset 0 -r 1.0 " />
+
   # Launch DLL drone
   <include file="$(find-pkg-share dll)/launch/dll_launch.xml">
     <arg name="map_path" value="$(var map_path)"/>
@@ -42,6 +44,7 @@
     <param name="initial_z"   value="0.0"/>
     <param name="initial_a"   value="3.14"/>
     <param name="use_imu" value="true"/>
+    <param name="use_sim_time" value="true"/>
     
     <remap from="imu" to="/arco/idmind_imu/imu"/> 
     
