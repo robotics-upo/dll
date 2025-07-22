@@ -71,6 +71,10 @@ You can download preliminar version of the the paper from [arXiv](https://arxiv.
 
 ## Acknowledgement
 
-This work is partially supported by the Programa Operativo FEDER Andalucia 2014–2020 through the project DeepBot (PY20 00817)
+This work was partially supported by the Programa Operativo FEDER Andalucia 2014–2020 through the project DeepBot (PY20 00817)
 
 ![Logos](logos.png)
+
+This work is also partially supported by the following grants: 1) INSERTION PID2021-127648OB-C31, and 2) RATEC PDC2022-133643-C21 projects, funded by MCIN/AEI/ 10.13039/501100011033 and the "European Union NextGenerationEU / PRTR".
+
+![Logos_MINCI](minci.png)
