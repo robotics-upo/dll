@@ -14,10 +14,11 @@
   <arg name="map" default="catec.bt" />
   <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
   <arg name="topic" default="/os1_cloud_node/points_non_dense"/>
+  <arg name="use_sim_time" default="false"/>
 
   # Launch DLL
-  <node name="dll_node" exec="dll_node" pkg="dll" output="screen">
-    
+  <node name="dll_node" exec="dll_node" pkg="dll" >
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="in_cloud" value="$(var topic)" />
     <param name="base_frame_id" value="$(var base_frame_id)" />
     <param name="odom_frame_id" value="$(var odom_frame_id)" />
@@ -37,6 +38,8 @@
   </node>
 
   <node if="$(var use_rviz)" name="rviz" exec="rviz2" pkg="rviz2"/> 
-  <node name="viz" pkg="rviz2" exec="rviz2"/>
+  <node name="viz" pkg="rviz2" exec="rviz2">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
   
 </launch>	

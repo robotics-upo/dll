@@ -4,7 +4,7 @@
   <!-- <param name="use_sim_time" value="true" />  -->
 
   # Bag file
-  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/airsim1/airsim1.db3 --start-offset 0 -r 1.0" />
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/airsim1/airsim1.db3 --start-offset 0 -r 1.0 --clock 100" />
   
   # Fake odometry. You HAVE to use a good odometry estrimator as LOAM
   <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom drone_1" />  
@@ -39,6 +39,7 @@
       <param name="initial_a"   value="$(var initial_a)"/>
       <param name="use_imu" value="true" />
       <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
+      <param name="use_sim_time" value="true"/>
       
     </node>
   </group>
@@ -63,8 +64,10 @@
       <param name="initial_a"   value="$(var initial_a)"/>
       <param name="use_imu" value="true" />
       <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
-      
+      <param name="use_sim_time" value="true"/>
     </node>
   </group>
-  <node name="rviz2" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/airsim.rviz"/>
+  <node name="rviz2" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/airsim.rviz">
+    <param name="use_sim_time" value="true"/>
+  </node>
 </launch>	

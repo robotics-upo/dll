@@ -6,7 +6,7 @@
   <!-- <param name="use_sim_time" value="true" />  -->
 
   # Bag file
-  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/catec2/catec2.db3 --start-offset 0 -r 1.0" />
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/catec2/catec2.db3 --start-offset 0 -r 1.0 --clock 100" />
 
  # Fake odometry. You better use a good odometry estrimator as LOAM
   <node pkg="tf2_ros" exec="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom base_link" />
@@ -41,10 +41,12 @@
     <param name="initial_a"   value="$(var initial_a)"/>
     <param name="use_imu" value="false" />  # Watch this!!! No IMU into the bag file, must be computed from ground truth
     <param name="align_method" value="1" />  # 1: DLL, 2: NDT, 3: ICP
-   
+    <param name="use_sim_time" value="true"/>
     
   </node>
 
-  <node name="rviz" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/catec.rviz" output="screen"/>
+  <node name="rviz" exec="rviz2" pkg="rviz2" args="-d $(find-pkg-share dll)/launch/catec.rviz" output="screen">
+    <param name="use_sim_time" value="true"/>
+  </node>
 
 </launch>	

@@ -15,7 +15,7 @@
   <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
   <arg name="topic" default="/os1_cloud_node/points_non_dense"/>
 
-  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --clock --start-offset 0 -r 1.0 " />
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --clock 100 --start-offset 0 -r 1.0 " />
 
   # Launch DLL drone
   <include file="$(find-pkg-share dll)/launch/dll_launch.xml">
@@ -24,6 +24,8 @@
     <arg name="initial_y" value="23.45"/>
     <arg name="initial_a" value="0.05"/>
     <arg name="update_rate" value="50.0"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="use_rviz" value="false"/>
   </include> 
 
   # Launch DLL Arco

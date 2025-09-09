@@ -163,7 +163,7 @@ public:
 					
 		// Publish current TF from odom to map
 		transformStamped.header.stamp=last_cloud_time;
-		// transformStamped.header.stamp=this->get_clock()->now();
+		transformStamped.header.stamp=this->get_clock()->now();
 		transformStamped.header.frame_id=m_globalFrameId;
 		transformStamped.child_frame_id=m_odomFrameId;
 		transformStamped.transform.translation.x=m_lastGlobalTf.getOrigin().x();
@@ -323,7 +323,7 @@ private:
 		static double lastYaw_imu = -1000.0;
 		double deltaYaw_imu = 0;
 		last_cloud_time = cloud->header.stamp;
-		last_cloud_time += rclcpp::Duration(std::chrono::microseconds(100000));
+		
 		// If the filter is not initialized then exit
 		if(!m_init)
 			return;
