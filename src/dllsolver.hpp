@@ -157,7 +157,7 @@ class DLLSolver
     }
 
 
-    bool solve(std::vector<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &yaw)
+    bool solve(pcl::PointCloud<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &yaw)
     {
         // Initial solution
         double x[4];

@@ -145,7 +145,7 @@ public:
 			RCLCPP_ERROR(this->get_logger(), "Invalid m_publishPointCloudRate value: %f",m_publishPointCloudRate);
 		}
 		// For getting pose estimations
-		m_posePub = this->create_publisher<geometry_msgs::msg::PoseStamped>("~/pose_estimation",10);
+		m_posePub = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("~/pose_estimation",10);
 	}
 
 	//!Default destructor
@@ -225,7 +225,7 @@ public:
 		return false;
 	}
 
-	void callSolver(std::vector<pcl::PointXYZ> &p, double tx, double ty, double tz, double roll, double pitch, double yaw, tf2::Stamped<tf2::Transform> odomTf) {
+	void callSolver(pcl::PointCloud<pcl::PointXYZ> &p, double tx, double ty, double tz, double roll, double pitch, double yaw, tf2::Stamped<tf2::Transform> odomTf) {
 		m_thread = true;
 		if(m_alignMethod == 1) { // DLL solver 
 			m_solver->solve(p, tx, ty, tz, yaw);
@@ -234,7 +234,6 @@ public:
 			m_grid3d->alignNDT(p, tx, ty, tz, yaw);
 		else if(m_alignMethod == 3) // ICP solver
 			m_grid3d->alignICP(p, tx, ty, tz, yaw);
-		m_thread = false;
 		RCLCPP_INFO(this->get_logger(),"Solved!");
 
 		// Update global TF
@@ -248,18 +247,23 @@ public:
 		RCLCPP_INFO(this->get_logger(),"TF actualizado");
 
 		// Publish 3D posestamped
-		geometry_msgs::msg::PoseStamped pose_msg;
+		geometry_msgs::msg::PoseWithCovarianceStamped pose_msg;
 		pose_msg.header.frame_id = m_globalFrameId;
 		pose_msg.header.stamp = last_cloud_time;
-		pose_msg.pose.position.x = tx;
-		pose_msg.pose.position.y = ty;
-		pose_msg.pose.position.z = tz;
-		pose_msg.pose.orientation.w = q.getW();
-		pose_msg.pose.orientation.x = q.getX();
-		pose_msg.pose.orientation.y = q.getY();
-		pose_msg.pose.orientation.z = q.getZ();
+		pose_msg.pose.pose.position.x = tx;
+		pose_msg.pose.pose.position.y = ty;
+		pose_msg.pose.pose.position.z = tz;
+		pose_msg.pose.pose.orientation.w = q.getW();
+		pose_msg.pose.pose.orientation.x = q.getX();
+		pose_msg.pose.pose.orientation.y = q.getY();
+		pose_msg.pose.pose.orientation.z = q.getZ();
+
+		pose_msg.pose.covariance[0] = getMeanError(p, m_lastGlobalTf);
 
 		m_posePub->publish(pose_msg);
+
+		m_thread = false;
+		
 	}
 		                                   
 private:
@@ -371,7 +375,7 @@ private:
 		pcl_ros::transformPointCloud(m_baseFrameId, m_pclTf, *cloud, baseCloud);
 		
 		// PointCloud2 to PointXYZ conevrsion, with range limits [0,1000]
-		std::vector<pcl::PointXYZ> downCloud;
+		pcl::PointCloud<pcl::PointXYZ> downCloud;
 		PointCloud2_to_PointXYZ(baseCloud, downCloud);
 			
 		// Get estimated position into the map
@@ -403,7 +407,7 @@ private:
 			mapTf.getBasis().getRPY(roll, pitch, yaw);
 		
 		// Tilt-compensate point-cloud according to roll and pitch
-		static std::vector<pcl::PointXYZ> points;
+		static pcl::PointCloud<pcl::PointXYZ> points;
 		float cr, sr, cp, sp;
 		float r00, r01, r02, r10, r11, r12, r20, r21, r22;
 		sr = sin(roll);
@@ -493,7 +497,7 @@ private:
 		return (float)yaw;
 	}
 
-	bool PointCloud2_to_PointXYZ(sensor_msgs::msg::PointCloud2 &in, std::vector<pcl::PointXYZ> &out)
+	bool PointCloud2_to_PointXYZ(sensor_msgs::msg::PointCloud2 &in, pcl::PointCloud<pcl::PointXYZ> &out)
 	{		
 		sensor_msgs::PointCloud2Iterator<float> iterX(in, "x");
 		sensor_msgs::PointCloud2Iterator<float> iterY(in, "y");
@@ -509,6 +513,25 @@ private:
 
 		return true;
 	}
+
+	float getMeanError(const pcl::PointCloud<pcl::PointXYZ> &pc, const tf2::Transform &tf_map) {
+		float ret_val = 0.0f;
+
+		pcl::PointCloud<pcl::PointXYZ> map_cloud;
+
+		pcl_ros::transformPointCloud (pc, map_cloud, tf_map);
+
+		size_t cont = 0;
+		for (const auto &p: map_cloud) {
+			if (m_grid3d->isIntoMap(p.x, p.y, p.z)) {
+				ret_val += m_grid3d->getPointDist(p.x, p.y, p.z);
+				cont++;
+			}
+		}
+
+		return ret_val / cont;
+	}
+
 
 	//! Indicates if the filter was initialized
 	bool m_init;
@@ -553,7 +576,7 @@ private:
 	double m_publishPointCloudRate;
 	rclcpp::TimerBase::SharedPtr timerpc_;
 	rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr m_pcPub;
-	rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr m_posePub;
+	rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr m_posePub;
 	//! 3D distance drid
    	//	Grid3d m_grid3d;
 	std::unique_ptr <Grid3d> m_grid3d;

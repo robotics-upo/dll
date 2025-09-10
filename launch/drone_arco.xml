@@ -15,7 +15,9 @@
   <arg name="map_path" default="$(find-pkg-share dll)/maps/$(var map)"/>
   <arg name="topic" default="/os1_cloud_node/points_non_dense"/>
 
-  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --clock 100 --start-offset 0 -r 1.0 " />
+  <arg name="rate" default="0.5"/>
+
+  <executable cmd="ros2 bag play $(find-pkg-share dll)/bags/rosbag_experiment1_drone --clock 100 --start-offset 0 -r $(var rate) " />
 
   # Launch DLL drone
   <include file="$(find-pkg-share dll)/launch/dll_launch.xml">
@@ -41,12 +43,13 @@
     <param name="update_min_d" value="0.1" />
     <param name="update_min_a" value="0.1" />
     <param name="update_min_time" value="0.1" />
-    <param name="initial_x"   value="14.0"/>
-    <param name="initial_y"   value="25.0"/>
-    <param name="initial_z"   value="0.0"/>
+    <param name="initial_x"   value="13.2"/>
+    <param name="initial_y"   value="27.3"/>
+    <param name="initial_z"   value="0.6"/>
     <param name="initial_a"   value="3.14"/>
     <param name="use_imu" value="true"/>
     <param name="use_sim_time" value="true"/>
+    <param name="use_yaw_increments" value="false"/>
     
     <remap from="imu" to="/arco/idmind_imu/imu"/> 
     

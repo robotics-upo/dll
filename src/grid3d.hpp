@@ -357,7 +357,7 @@ public:
 		return true;
 	}
 
-	bool alignICP(std::vector<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
+	bool alignICP(pcl::PointCloud<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
 	{
 		pcl::PointCloud<pcl::PointXYZ>::Ptr c (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ> Final;
@@ -392,7 +392,7 @@ public:
 		return true;
 	}
 
-	bool alignNDT(std::vector<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
+	bool alignNDT(pcl::PointCloud<pcl::PointXYZ> &p, double &tx, double &ty, double &tz, double &a)
 	{
 		pcl::PointCloud<pcl::PointXYZ>::Ptr c (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ> Final;
