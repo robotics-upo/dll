@@ -1,0 +1,12 @@
+<!--
+-->
+<launch>
+  
+  # TFs
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_drone_lidar_sensor" args="0.21 0.0 -0.26 0 0 0.0 base_link os1_sensor"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_drone_lidar_imu"    args="0.006253 -0.011775 0.007645 0.0 0.0 0.0 1.0 os1_sensor os1_imu"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_drone_lidar"        args="0 0.0 0.03618 3.1416 0.0 0.0 os1_sensor os1_lidar"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_drone_imu"          args="0 0.0 0 0 0.0 0.0 base_link imu"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="tf_camera"             args="0.11 -0.09 -0.12 -1.57 0 -1.57 base_link usb_cam"/>
+   
+</launch>	

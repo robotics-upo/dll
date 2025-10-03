@@ -6,7 +6,7 @@
   <param name="use_sim_time" value="true" /> 
 
   # Bag file
-  <node name="bag_player" type="play" pkg="rosbag" args="airsim1.bag -s 0 -r 1.0 --clock " />
+  <node name="bag_player" type="play" pkg="rosbag" args="$HOME/dll_bags/airsim1.bag -s 0 -r 1.0 --clock " />
 
   # Fake odometry. You HAVE to use a good odometry estrimator as LOAM
   <node pkg="tf" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 odom drone_1 10" />

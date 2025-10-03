@@ -272,8 +272,30 @@ private:
 		
 		// PointCloud2 to PointXYZ conevrsion, with range limits [0,1000]
 		std::vector<pcl::PointXYZ> downCloud;
+		pcl::PointCloud<pcl::PointXYZ> dCloud;
 		PointCloud2_to_PointXYZ(baseCloud, downCloud);
-			
+		
+		for (auto &x:downCloud) {
+			dCloud.push_back(x);
+		}
+
+		if(m_alignMethod == 4) // External AMCL solver
+		{
+			try
+			{
+				tf::StampedTransform stamped_mapTf;
+                m_tfListener.waitForTransform(m_globalFrameId, m_baseFrameId, ros::Time(0), ros::Duration(2.0));
+                m_tfListener.lookupTransform(m_globalFrameId, m_baseFrameId, ros::Time(0), stamped_mapTf);
+
+				mapTf = stamped_mapTf;
+			}
+			catch (tf::TransformException ex)
+			{
+				ROS_ERROR("%s",ex.what());
+				return;
+			}
+		}
+
 		// Get estimated position into the map
 		double tx, ty, tz;
 		tx = mapTf.getOrigin().getX();
@@ -326,18 +348,28 @@ private:
 		double a = yaw;
 		if(m_use_imu && m_useYawIncrements)
 			a = yaw+deltaYaw_imu;
+
+		const std::chrono::steady_clock::time_point start(std::chrono::steady_clock::now());
+  
 		if(m_alignMethod == 1) // DLL solver
 			m_solver.solve(points, tx, ty, tz, a);
 		else if(m_alignMethod == 2) // NDT solver
 			m_grid3d.alignNDT(points, tx, ty, tz, a);
 		else if(m_alignMethod == 3) // ICP solver
 			m_grid3d.alignICP(points, tx, ty, tz, a);
-		yaw = a;
 		
+ 		yaw = a;
+		const std::chrono::steady_clock::time_point end(std::chrono::steady_clock::now());
+  		
 		// Update global TF
 		tf::Quaternion q;
 		q.setRPY(roll, pitch, yaw);
-		m_lastGlobalTf = tf::Transform(q, tf::Vector3(tx, ty, tz))*odomTf.inverse();
+		mapTf = tf::Transform(q, tf::Vector3(tx, ty, tz));
+		m_lastGlobalTf = mapTf * odomTf.inverse();
+
+		const auto t = std::chrono::duration_cast<std::chrono::microseconds>( end - start ).count();
+
+		std::cout <<  t << "\t" << getMeanError(dCloud, mapTf) << "\n";
 
 		// Update time and transform information
 		m_lastOdomTf = odomTf;
@@ -411,6 +443,24 @@ private:
 		}
 
 		return true;
+	}
+
+	float getMeanError(const pcl::PointCloud<pcl::PointXYZ> &pc, const tf::Transform &tf_map) {
+		float ret_val = 0.0f;
+
+		pcl::PointCloud<pcl::PointXYZ> map_cloud;
+
+		pcl_ros::transformPointCloud (pc, map_cloud, tf_map);
+
+		size_t cont = 0;
+		for (const auto &p: map_cloud) {
+			if (m_grid3d.isIntoMap(p.x, p.y, p.z)) {
+				ret_val += m_grid3d.getPointDist(p.x, p.y, p.z);
+				cont++;
+			}
+		}
+
+		return ret_val / cont;
 	}
 
 	//! Indicates if the filter was initialized

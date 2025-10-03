@@ -6,7 +6,10 @@
   <param name="use_sim_time" value="true" /> 
 
   # Bag file
-  <node name="bag_player" type="play" pkg="rosbag" args="mbzirc.bag -s 0 -r 1.0 --clock " />
+  <arg name="bag_path" default="$(find dll)/bags" />
+  <node name="bag_player" type="play" pkg="rosbag" args="$(arg bag_path)/mbzirc_corrected.bag -s 0 -r 1.0 --clock " >
+    <remap from="/tf" to ="/tf_unused"/>
+  </node>
 
   # Odometry from odom to base_link already computed into the bag file
   # Odometry computed with LOAM
@@ -18,10 +21,31 @@
   <arg name="initial_x" default="16.964"/>
   <arg name="initial_y" default="61.508"/>
   <arg name="initial_z" default="1.0"/>
-  <arg name="initial_a" default="-0.063"/> 
+  <arg name="initial_a" default="1.57"/> 
   <arg name="map" default="mbzirc.bt" />
   <arg name="map_path" default="$(find dll)/maps/$(arg map)"/>
 
+   <!-- <arg name="base_frame" default="$(arg base_frame_id)"/>
+    <arg name="pi_med"  default="1.57"/>
+    <arg name="pi"  default="3.14"/>
+    <arg name="mpi_med"  default="-1.57"/>
+
+    <node name="tf_nuc" pkg="tf" type="static_transform_publisher" args="0 0.0 0.12 0.0 0.0 0.0 $(arg base_frame) nuc 10"/>
+    <node name="tf_lidar_sensor" pkg="tf" type="static_transform_publisher" args="0.13 0.0 -0.25 0 0 0.0 nuc os1_sensor 10"/>
+    
+    <node name="tf_lidar_imu" pkg="tf" type="static_transform_publisher" args="0.006253 -0.011775 0.007645 0.0 0.0 0.0 1.0 os1_sensor os1_imu 10"/>
+    <node name="tf_lidar" pkg="tf" type="static_transform_publisher" args="0 0.0 0.03618 $(arg mpi_med) 0.0 0.0 os1_sensor os1_lidar 10"/>  -->
+
+<include file="$(find dll)/launch/frames.launch"/>
+  <arg name="odometry" default="false"/>
+   <node pkg="tf" type="static_transform_publisher" name="odom_tf" args="0 0 0 0 0 0 $(arg odom_frame_id) $(arg base_frame_id) 10" unless ="$(arg odometry)"/>
+
+<node pkg="odom_to_tf" type="odom_to_tf.py" name="odom_to_tf" if="$(arg odometry)" output="screen">
+    <param name="laser_frame" value="$(arg base_frame_id)"/>
+    <param name="rotate_90" value="false"/>
+    <param name="overridestamp" value="true"/>
+    <remap from="odom" to="laser_odom_to_init"/>
+  </node>
   # Launch DLL
   <node name="dll_node" type="dll_node" pkg="dll" output="screen">
     <remap from="/dll_node/initial_pose" to="/initialpose"/>
