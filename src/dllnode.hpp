@@ -357,10 +357,21 @@ private:
 			m_grid3d.alignNDT(points, tx, ty, tz, a);
 		else if(m_alignMethod == 3) // ICP solver
 			m_grid3d.alignICP(points, tx, ty, tz, a);
+
+
+		
 		
  		yaw = a;
 		const std::chrono::steady_clock::time_point end(std::chrono::steady_clock::now());
   		
+		// Get the difference with the ICP computation
+		double tx2, ty2, tz2, a2, d;
+		m_grid3d.alignICP(points, tx2, ty2, tz2, a);
+
+		d = sqrt((tx2-tx)*(tx2-tx) + (ty2-ty)*(ty2-ty) +(tz2-tz)*(tz2-tz));
+		a2 = a2 - a;
+
+
 		// Update global TF
 		tf::Quaternion q;
 		q.setRPY(roll, pitch, yaw);
@@ -369,7 +380,7 @@ private:
 
 		const auto t = std::chrono::duration_cast<std::chrono::microseconds>( end - start ).count();
 
-		std::cout <<  t << "\t" << getMeanError(dCloud, mapTf) << "\n";
+		std::cout <<  t << "\t" << getMeanError(dCloud, mapTf) << "\t d = " << d <<"\t a = " << a << "\n";
 
 		// Update time and transform information
 		m_lastOdomTf = odomTf;
