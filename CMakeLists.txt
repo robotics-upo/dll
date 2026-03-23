@@ -8,7 +8,7 @@ add_compile_options(-O3 -march=native -mtune=native -mavx -mavx2 -mfma -fopenmp-
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -128,13 +128,14 @@ add_dependencies(dll_node ${dllEXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(grid3d_node_dll ${dll_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} )
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(dll_node
+target_link_libraries(dll_node 
    ${catkin_LIBRARIES}
    ${CERES_LIBRARIES}
    ${OpenMP_LIBS}
 )
 target_link_libraries(grid3d_node_dll
    ${catkin_LIBRARIES}
+   ${CERES_LIBRARIES}
    ${OpenMP_LIBS}
 )
 
